@@ -60,9 +60,13 @@ async function createSubscriber(email, apiKey) {
 }
 
 async function tagSubscriber(subscriberId, tagId, apiKey) {
+  // Kit v4 wants the id flat on the body, NOT nested under "subscriber" —
+  // {"subscriber": {"id": ...}} returns a 422 ("Either subscriber id or
+  // email address is required to tag subscriber"). Confirmed against the
+  // live API 2026-09-28.
   const { ok } = await kitFetch(`tags/${tagId}/subscribers`, apiKey, {
     method: "POST",
-    body: JSON.stringify({ subscriber: { id: subscriberId } }),
+    body: JSON.stringify({ id: subscriberId }),
   });
   return ok;
 }

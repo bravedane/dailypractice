@@ -920,7 +920,7 @@ function askWhenTime(idx) {
 }
 function askWhenAnchor(idx) {
   const key = state.gapPicks[idx];
-  askQuestion(`Tied to what — something already fixed in your day — for **${key}**?`, {
+  askQuestion(`What's already a fixed part of your day that **${key}** can happen right after or right before?`, {
     type: 'text', placeholder: 'e.g. right after I pour my coffee',
     onSubmit: (val) => { state.timing[key].anchor = val; askBackupTime(idx); }
   });
@@ -934,7 +934,7 @@ function askBackupTime(idx) {
 }
 function askBackupAnchor(idx) {
   const key = state.gapPicks[idx];
-  askQuestion(`Tied to what — the backup for **${key}**?`, {
+  askQuestion(`Same question for the backup time — what's it anchored to?`, {
     type: 'text', placeholder: 'e.g. right before I go to bed',
     onSubmit: (val) => {
       state.timing[key].backupAnchor = val;

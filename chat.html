@@ -928,11 +928,15 @@ function askBackupTime() {
 function askBackupAnchor() {
   askQuestion("Tied to what?", {
     type: 'text', placeholder: 'e.g. right before I go to bed',
-    onSubmit: (val) => { state.backupAnchor = val; askReset(); }
+    onSubmit: (val) => {
+      state.backupAnchor = val;
+      if (state.isMember) askReset();
+      else showResult();
+    }
   });
 }
 function askReset() {
-  askQuestion("Last one. Pick 4 weeks in a row to go all in — no exceptions. Here's the default list, edit it to whatever going all in means for you.", {
+  askQuestion("Last one — this one's for MWOD members. Act Like a FUTURE: pick 4 weeks in a row this round to go all in, no exceptions. Here's the default list, edit it to whatever going all in means for you.", {
     type: 'reset-card',
     onSubmit: () => { askResetDate(); }
   });
@@ -981,7 +985,7 @@ function showResult() {
     }).join("")}
     <div class="result-block"><div class="result-label">When</div><div class="result-value">${state.time || "—"} · ${escapeHtml(state.anchor)}</div></div>
     <div class="result-block"><div class="result-label">When It Breaks</div><div class="result-value">${state.backupTime || "—"} · ${escapeHtml(state.backupAnchor)}</div></div>
-    <div class="result-block"><div class="result-label">The Reset — 4 Weeks</div><div class="result-value">${resetRangeText}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">${state.resetItems.filter(r=>r.trim()).map(escapeHtml).join(' · ')}</div></div>
+    ${state.isMember ? `<div class="result-block"><div class="result-label">Act Like a FUTURE — 4 Weeks</div><div class="result-value">${resetRangeText}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">${state.resetItems.filter(r=>r.trim()).map(escapeHtml).join(' · ')}</div></div>` : ''}
   `;
   document.getElementById('printArea').innerHTML = `
     <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#a8860c; margin-bottom:6px;">Your Daily Practice</div>

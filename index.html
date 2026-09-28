@@ -595,7 +595,7 @@ function renderStep0() {
   return `
     <div class="step-label">Step 0 of 7 — Who's Declaring</div>
     <h1>What's your email?</h1>
-    <p class="sub">Takes about 5 minutes, one question at a time. If you're an MWOD member, this looks up your round history — not to gate you, just so the recommendation later fits where you actually are. Not a member? Enter any email and skip ahead.</p>
+    <p class="sub">Takes about 5 minutes, one question at a time. If you're an MWOD member, this pulls up your round history so the recommendation fits where you're at. Not a member? Any email works.</p>
     <div class="content">
       <label class="field-label">Email</label>
       <input type="text" placeholder="you@example.com" value="${state.email}" oninput="state.email=this.value; updateNavButton();">

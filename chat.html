@@ -838,8 +838,7 @@ function askAddAnotherArea() {
     options: [{label: '+ Add another', value: 'add'}, {label: "I'm done", value: 'done'}],
     onSubmit: (val) => {
       if (val === 'add') askCustomAreaName();
-      else if (state.isMember) askReturningGap();
-      else askGapPicks();
+      else askNonNegotiables();
     }
   });
 }
@@ -850,10 +849,8 @@ function askCustomAreaName() {
       if (val && val.trim() && !allAreaKeys().includes(val.trim())) {
         state.customAreas.push(val.trim());
         askArea(allAreaKeys().length - 1);
-      } else if (state.isMember) {
-        askReturningGap();
       } else {
-        askGapPicks();
+        askNonNegotiables();
       }
     }
   });
@@ -884,16 +881,16 @@ function askGapPicks() {
     askQuestion("Which of these do you want to build a specific daily habit around this time? Choose at least 1, up to 5 max — we'll build the actual practice for each one next.", {
       type: 'multichips', selected: [], min: 1, max: 5,
       options: list.map(k => ({label: k, value: k})),
-      onSubmit: (vals) => { state.gapPicks = vals; askNonNegotiables(); }
+      onSubmit: (vals) => { state.gapPicks = vals; askPracticeForArea(0); }
     });
   };
   if (nudge) { pushGeorge(nudge, () => setTimeout(proceed, 450)); }
   else { proceed(); }
 }
 function askNonNegotiables() {
-  askQuestion("Good — those are the habits we'll build next. First, a separate list: these are the baseline standards that apply no matter what you picked above. Edit anything, mark items in or out, or add your own.", {
+  askQuestion("Before we get into specific habits, here's a separate recommendation: a baseline we suggest regardless of what you build below. It's not a mandate — edit anything, turn items off, or add your own.", {
     type: 'nn-card',
-    onSubmit: () => { askPracticeForArea(0); }
+    onSubmit: () => { if (state.isMember) askReturningGap(); else askGapPicks(); }
   });
 }
 function askPracticeForArea(idx) {
@@ -967,7 +964,7 @@ function showResult() {
     <div style="font-family:'Schabo Condensed', sans-serif; font-size:19px; text-transform:uppercase; margin-bottom:10px;">Here's what you just committed to.</div>
     <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">Save it, screenshot it, put it somewhere you'll actually see it.</div>
     <div class="result-block"><div class="result-label">Look Back</div><div class="result-value" style="font-size:13px;">${baselineDetails}</div></div>
-    <div class="result-block"><div class="result-label">Non-Negotiables</div><div class="result-value" style="font-size:13px;">
+    <div class="result-block"><div class="result-label">Baseline Recommendation</div><div class="result-value" style="font-size:13px;">
       ${nnIn.map(nn => `✓ ${escapeHtml(nn.text)}`).join("<br>")}
       ${nnOut.length ? `<br><span style="color:var(--muted);">Out: ${nnOut.map(nn=>escapeHtml(nn.text)).join(', ')}</span>` : ''}
     </div></div>

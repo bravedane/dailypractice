@@ -204,6 +204,17 @@
     justify-content: flex-end;
     margin-top: 10px;
   }
+  .back-link {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 12.5px;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .back-link:hover { color: var(--text); }
   .field-label {
     display: block;
     font-size: 12px;
@@ -394,8 +405,41 @@ const state = {
   time: "", anchor: "", backupTime: "", backupAnchor: "",
   pending: null,
   qCount: 0,
-  stepNum: 0
+  stepNum: 0,
+  history: []
 };
+
+// --- Back navigation -------------------------------------------------
+function snapshotState() {
+  const { transcript, history, pending, ...rest } = state;
+  return JSON.parse(JSON.stringify(rest));
+}
+function restoreSnapshot(snap) {
+  Object.keys(snap).forEach(k => { state[k] = snap[k]; });
+}
+function recordHistoryStep(text, pending) {
+  state.history.push({ text, pending, snapshot: snapshotState(), transcriptLen: state.transcript.length });
+}
+function backButtonHtml() {
+  if (state.history.length < 2) return '';
+  return `<button class="back-link" onclick="goBack()">← Back</button><br>`;
+}
+function goBack() {
+  if (state.history.length < 2) return;
+  state.history.pop();
+  const prev = state.history.pop();
+  restoreSnapshot(prev.snapshot);
+  state.transcript = state.transcript.slice(0, prev.transcriptLen);
+  renderTranscript();
+  let pending = prev.pending;
+  if (pending.type === 'multichips') pending = { ...pending, selected: [] };
+  recordHistoryStep(prev.text, pending);
+  document.getElementById('inputArea').innerHTML = '';
+  pushGeorge(prev.text, () => {
+    state.pending = pending;
+    renderInputArea();
+  });
+}
 
 // Rough total question count for the progress bar. Recomputed as choices
 // (custom areas, gap picks) become known so it stays honest rather than
@@ -492,17 +536,19 @@ function clearInputArea() {
 
 function askQuestion(text, pending) {
   document.getElementById('inputArea').innerHTML = '';
+  if (pending.type === 'multichips') pending.selected = pending.selected || [];
+  recordHistoryStep(text, pending);
   state.stepNum++;
   updateProgressBar();
   pushGeorge(text, () => {
     state.pending = pending;
-    if (pending.type === 'multichips') pending.selected = pending.selected || [];
     renderInputArea();
   });
 }
 
 function askCard(introText, cardHtmlFn, pending) {
   document.getElementById('inputArea').innerHTML = '';
+  recordHistoryStep(introText, pending);
   state.stepNum++;
   updateProgressBar();
   pushGeorge(introText, () => {
@@ -525,9 +571,10 @@ function renderInputArea() {
   const el = document.getElementById('inputArea');
   if (!p) { el.innerHTML = ''; return; }
   scrollBottom();
+  const back = backButtonHtml();
 
   if (p.type === 'chips') {
-    el.innerHTML = `<div class="chip-row">${p.options.map((o, idx) =>
+    el.innerHTML = `${back}<div class="chip-row">${p.options.map((o, idx) =>
       `<button class="chip" data-idx="${idx}" onclick="handleChipClick(this)">${escapeHtml(o.label)}</button>`
     ).join('')}</div>`;
     return;
@@ -536,6 +583,7 @@ function renderInputArea() {
   if (p.type === 'multichips') {
     const sel = p.selected;
     el.innerHTML = `
+      ${back}
       <div class="chip-row" id="mcRow">${p.options.map((o, idx) => {
         const isSel = sel.includes(o.value);
         return `<button class="chip ${isSel?'sel':''}" data-idx="${idx}" onclick="handleMultiChipClick(this)">${escapeHtml(o.label)}</button>`;
@@ -550,6 +598,7 @@ function renderInputArea() {
   if (p.type === 'text' || p.type === 'text-optional') {
     const optional = p.type === 'text-optional';
     el.innerHTML = `
+      ${back}
       <div class="text-row">
         <input type="text" id="textInput" placeholder="${p.placeholder||''}" autocomplete="off" onkeydown="if(event.key==='Enter') submitTextInput()">
         <button class="send" onclick="submitTextInput()">${optional?'Send':'Send'}</button>
@@ -561,6 +610,7 @@ function renderInputArea() {
 
   if (p.type === 'time') {
     el.innerHTML = `
+      ${back}
       <div class="text-row">
         <input type="time" id="timeInput">
         <button class="send" onclick="submitTimeInput()">Send</button>
@@ -610,6 +660,7 @@ function submitTimeInput() {
 function renderNNCard() {
   const el = document.getElementById('inputArea');
   el.innerHTML = `
+    ${backButtonHtml()}
     <div class="card">
       ${state.nonNegotiables.map((nn,i) => `
         <div class="nn-row">
@@ -644,6 +695,7 @@ function renderPracticeCard(key) {
   const el = document.getElementById('inputArea');
   const ready = p.practice.trim() && p.doneDefinition.trim() && p.amount.trim();
   el.innerHTML = `
+    ${backButtonHtml()}
     <div class="card">
       <label class="field-label">The practice</label>
       <input type="text" placeholder="e.g. 20 min walk before checking my phone" value="${escapeHtml(p.practice)}" oninput="state.practices['${key}'].practice=this.value; renderPracticeCardBtn();">
@@ -668,6 +720,7 @@ function renderResetCard() {
   const el = document.getElementById('inputArea');
   const anyFilled = state.resetItems.some(r => r.trim());
   el.innerHTML = `
+    ${backButtonHtml()}
     <div class="card">
       ${state.resetItems.map((item,i) => `
         <div class="reset-row">
@@ -695,6 +748,7 @@ function renderDate3() {
   const yearOpts = [26,27,28].map(y => `<option value="20${y}" ${Number(state.resetYear)===2000+y?'selected':''}>'${y}</option>`).join('');
   const ready = state.resetMonth && state.resetDay && state.resetYear;
   el.innerHTML = `
+    ${backButtonHtml()}
     <div class="card">
       <div style="display:flex; gap:8px;">
         <select class="date-sel" style="flex:2;" onchange="state.resetMonth=this.value; renderDate3();"><option value="">Month</option>${monthOpts}</select>
@@ -827,7 +881,7 @@ function askGapPicks() {
     const keys = allAreaKeys();
     const flagged = keys.filter(k => state.fRatings[k] === 'inconsistent' || state.fRatings[k] === 'absent');
     const list = flagged.length ? flagged : keys.filter(k => state.fRatings[k]);
-    askQuestion("Which of these do you want to build a specific daily habit around this time? Pick 1 to 5 — we'll build the actual practice for each one next.", {
+    askQuestion("Which of these do you want to build a specific daily habit around this time? Choose at least 1, up to 5 max — we'll build the actual practice for each one next.", {
       type: 'multichips', selected: [], min: 1, max: 5,
       options: list.map(k => ({label: k, value: k})),
       onSubmit: (vals) => { state.gapPicks = vals; askNonNegotiables(); }
@@ -837,7 +891,7 @@ function askGapPicks() {
   else { proceed(); }
 }
 function askNonNegotiables() {
-  askQuestion("Here's the standard non-negotiables — the stuff you never miss, no matter what. Edit anything, mark items in or out, or add your own.", {
+  askQuestion("Good — those are the habits we'll build next. First, a separate list: these are the baseline standards that apply no matter what you picked above. Edit anything, mark items in or out, or add your own.", {
     type: 'nn-card',
     onSubmit: () => { askPracticeForArea(0); }
   });

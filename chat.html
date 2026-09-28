@@ -432,6 +432,10 @@ function formatGeorgeText(text) {
 function scrollBottom() {
   const el = document.getElementById('scroll');
   el.scrollTop = el.scrollHeight;
+  // Input controls (chips/cards) render after the transcript and can
+  // change the layout height slightly after this frame — nudge again
+  // once the browser has painted so the last message stays in view.
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
 }
 
 function renderTranscript() {
@@ -517,6 +521,7 @@ function renderInputArea() {
   const p = state.pending;
   const el = document.getElementById('inputArea');
   if (!p) { el.innerHTML = ''; return; }
+  scrollBottom();
 
   if (p.type === 'chips') {
     el.innerHTML = `<div class="chip-row">${p.options.map((o, idx) =>

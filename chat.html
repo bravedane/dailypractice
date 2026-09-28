@@ -642,13 +642,13 @@ function confirmDate3() {
 function startFlow() {
   state.stepNum = 0;
   updateProgressBar();
-  pushGeorge("Hey — let's build your practice for this round. About 5 minutes, one question at a time — you'll always see how much is left up top.", () => {
+  pushGeorge("Hey — let's build your daily practice. About 5 minutes, one question at a time — you'll always see how much is left up top.", () => {
     setTimeout(askRoundCount, 500);
   });
 }
 
 function askRoundCount() {
-  askQuestion("First — how many rounds have you completed? Totally fine to skip if you're new or not sure.", {
+  askQuestion("First — how many times have you done a focused stretch like this before? Totally fine to skip if this is your first time.", {
     type: 'text-optional', placeholder: 'e.g. 6',
     onSubmit: (val) => { state.roundCount = val === '(skipped)' ? '' : val; askArea(0); }
   });
@@ -692,7 +692,7 @@ function askCustomAreaName() {
   });
 }
 function askReturningGap() {
-  askQuestion("Coming back after sitting a round or more out?", {
+  askQuestion("Coming back after taking some time off?", {
     type: 'chips',
     options: [{label: 'Yes', value: true}, {label: 'No', value: false}],
     onSubmit: (val) => { state.returningAfterGap = val; askGapPicks(); }
@@ -700,12 +700,12 @@ function askReturningGap() {
 }
 function tenureNudge() {
   if (state.returningAfterGap === true) {
-    return "You're coming back after time away — that resets the clock, regardless of how many rounds you've done before. Lean toward 1–2. Rebuild the streak before you rebuild the list.";
+    return "You're coming back after time away — that resets the clock, regardless of how many times you've done this before. Lean toward 1–2. Rebuild the streak before you rebuild the list.";
   }
   const n = parseInt(state.roundCount, 10);
   if (isNaN(n)) return null;
   if (n <= 1) return "You're new to this. Lean toward picking just 1 — maybe 2. Consistency beats a long list right now.";
-  if (n <= 3) return "A few rounds in. 1–2 is still a solid move — no need to max it out to prove something.";
+  if (n <= 3) return "You've done this a few times. 1–2 is still a solid move — no need to max it out to prove something.";
   return null;
 }
 function askGapPicks() {
@@ -762,7 +762,7 @@ function askBackupAnchor() {
   });
 }
 function askReset() {
-  askQuestion("Last one. Pick 4 consecutive weeks this quarter to go full-strength — no exceptions. Here's the default list, edit it to whatever full-strength means for you.", {
+  askQuestion("Last one. Pick 4 weeks in a row to go all in — no exceptions. Here's the default list, edit it to whatever going all in means for you.", {
     type: 'reset-card',
     onSubmit: () => { askResetDate(); }
   });

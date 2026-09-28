@@ -681,7 +681,7 @@ function askArea(idx) {
   if (idx >= keys.length) { askAddAnotherArea(); return; }
   const key = keys[idx];
   const [lo, mid, hi] = ratingLabelsFor(key);
-  askQuestion(`Recently, how's **${key}** actually gone?`, {
+  askQuestion(`Let's talk about **${key}**. How's that actually been going for you lately?`, {
     type: 'chips',
     options: [{label: lo, value: 'absent'}, {label: mid, value: 'inconsistent'}, {label: hi, value: 'strong'}],
     onSubmit: (val) => { state.fRatings[key] = val; askFollowUp(key, val, idx); }

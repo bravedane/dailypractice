@@ -86,16 +86,14 @@
   .avatar {
     width: 26px; height: 26px;
     border-radius: 50%;
-    background: var(--gold);
-    color: #171717;
-    font-family: 'Schabo Condensed', sans-serif;
-    font-weight: 400;
-    font-size: 14px;
+    background: var(--surface);
+    border: 1px solid var(--gold);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
     margin-right: 8px;
     margin-top: 2px;
   }
+  .avatar img { width: 13px; height: auto; opacity: 0.95; }
   .bubble {
     max-width: 78%;
     padding: 11px 14px;
@@ -373,10 +371,10 @@ function renderTranscript() {
   const el = document.getElementById('scroll');
   el.innerHTML = state.transcript.map(t => {
     if (t.typing) {
-      return `<div class="row george"><div class="avatar">G</div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div></div>`;
+      return `<div class="row george"><div class="avatar"><img src="assets/mwod-logo-white.svg" alt="MWOD"></div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div></div>`;
     }
     if (t.who === 'george') {
-      return `<div class="row george"><div class="avatar">G</div><div class="bubble">${t.html}</div></div>`;
+      return `<div class="row george"><div class="avatar"><img src="assets/mwod-logo-white.svg" alt="MWOD"></div><div class="bubble">${t.html}</div></div>`;
     }
     return `<div class="row user"><div class="bubble">${t.html}</div></div>`;
   }).join('');

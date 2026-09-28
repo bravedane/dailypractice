@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Daily Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'Schabo Condensed';
+    src: url('assets/SCHABO-Condensed.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+  }
+  :root {
+    --black: #171717;
+    --bg: #0c0c0c;
+    --surface: #171717;
+    --border: #2a2a2a;
+    --gold: #ffd627;
+    --white: #ffffff;
+    --text: #f7f7f7;
+    --muted: #9a9a9a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% -10%, rgba(255, 214, 39, 0.07), transparent 45%);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .wrap { width: 100%; max-width: 600px; }
+  .brand-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .brand-header img { height: 20px; opacity: 0.92; }
+  .brand-header .divider { width: 1px; height: 16px; background: var(--border); }
+  .brand-header .tagline {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .card-wrap { position: relative; }
+  .yellow-accent {
+    position: absolute;
+    width: 46px;
+    opacity: 0.9;
+    top: -14px;
+    right: -10px;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .progress {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+  .dot {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+  .dot.active { background: var(--gold); }
+  .card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 24px;
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .step-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .sub-progress {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  h1 {
+    font-family: 'Schabo Condensed', 'Inter', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    font-size: 24px;
+    line-height: 1.28;
+    margin: 0 0 6px 0;
+    text-transform: uppercase;
+  }
+  h1 .hl { color: var(--gold); }
+  p.sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 22px 0;
+    line-height: 1.5;
+  }
+  .content { flex: 1; }
+  .f-list { display: flex; flex-direction: column; gap: 16px; }
+  .f-row {
+    padding: 10px 0 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .f-row:last-child { border-bottom: none; }
+  .f-top {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .f-name { font-size: 14px; font-weight: 600; }
+  .other-name-input {
+    background: #141414;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    width: 110px;
+  }
+  .seg {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .seg button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 8px 4px;
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+  }
+  .seg button:last-child { border-right: none; }
+  .seg button.sel {
+    background: var(--gold);
+    color: #171717;
+    font-weight: 600;
+  }
+  .how-so {
+    width: 100%;
+    background: #141414;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .how-so::placeholder { color: #6b6b6b; }
+  .big-rating-row { display: flex; flex-direction: column; gap: 20px; }
+  .seg-large { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .seg-large button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 16px 6px;
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+  }
+  .seg-large button:last-child { border-right: none; }
+  .seg-large button.sel { background: var(--gold); color: #171717; font-weight: 700; }
+  .followup-label {
+    font-size: 13px;
+    color: var(--gold);
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .how-so-large {
+    width: 100%;
+    background: #141414;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  .how-so-large::placeholder { color: #6b6b6b; }
+  .text-link {
+    background: none;
+    border: none;
+    color: var(--gold);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 8px;
+  }
+  .mini-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #141414;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+  .mini-toggle-label { font-size: 13px; color: var(--muted); }
+  .gap-list { display: flex; flex-direction: column; gap: 8px; }
+  .gap-option {
+    background: #141414;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: left;
+  }
+  .gap-option .tag {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: 8px;
+  }
+  .gap-option .note {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .gap-option.sel {
+    border-color: var(--gold);
+    background: rgba(255, 214, 39, 0.08);
+  }
+  .gap-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .add-own-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .add-own-row input {
+    margin-bottom: 0;
+    flex: 1;
+  }
+  .add-own-row button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--gold);
+    border-radius: 8px;
+    padding: 0 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  input[type=text], input[type=time] {
+    width: 100%;
+    background: #141414;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 15px;
+    margin-bottom: 14px;
+  }
+  select {
+    background: #141414;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 12px 8px;
+    font-size: 14px;
+  }
+  label.field-label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .nn-row {
+    display: grid;
+    grid-template-columns: 1fr 90px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .nn-row:last-child { border-bottom: none; }
+  .nn-text {
+    background: #141414;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-size: 13px;
+    width: 100%;
+  }
+  .nn-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .nn-toggle button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 8px 4px;
+    cursor: pointer;
+  }
+  .nn-toggle button.sel-in { background: var(--gold); color: #171717; font-weight: 700; }
+  .nn-toggle button.sel-out { background: #3a1f1f; color: #ff8080; font-weight: 700; }
+  .remove-x {
+    background: none;
+    border: none;
+    color: #6b6b6b;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 6px;
+  }
+  .reset-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .reset-item input { margin-bottom: 0; flex: 1; }
+  .btn-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+  }
+  button.nav {
+    background: var(--gold);
+    color: #171717;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 22px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  button.nav:not(:disabled):not(.secondary):hover {
+    box-shadow: 0 0 0 3px rgba(255, 214, 39, 0.18);
+  }
+  button.nav.secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  button.nav:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .payoff-heading {
+    font-size: 13px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .result-block {
+    background: #141414;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .result-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .result-value {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .directive {
+    background: rgba(255, 214, 39, 0.1);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand-header">
+    <img src="assets/mwod-logo-white.svg" alt="MWOD">
+    <div class="divider"></div>
+    <div class="tagline">Your Daily Practice</div>
+  </div>
+  <div class="progress" id="progress"></div>
+  <div class="card-wrap">
+    <img class="yellow-accent" src="assets/hero-yellow-shape-1.svg" alt="">
+    <div class="card" id="card"></div>
+  </div>
+</div>
+
+<script>
+const CORE_AREAS = ["Fitness","Food","Family","Friends","Faith","Work","Frenemies","Money","Projects","Relationships","Phone"];
+const RATING_LABELS = {
+  "Fitness": ["Absent","Inconsistent","Strong"],
+  "Food": ["Careless","Inconsistent","Clean"],
+  "Family": ["Distant","Inconsistent","Present"],
+  "Friends": ["Isolated","Inconsistent","Connected"],
+  "Faith": ["Dormant","Inconsistent","Grounded"],
+  "Work": ["Behind","Treading Water","On Top Of It"],
+  "Frenemies": ["Overexposed","Managing","Protected"],
+  "Money": ["Avoiding It","Inconsistent","In Control"],
+  "Projects": ["Stalled","Moving","On Track"],
+  "Relationships": ["Neglected","Inconsistent","Invested"],
+  "Phone": ["Out Of Control","Some Control","Disciplined"]
+};
+function ratingLabelsFor(key) {
+  return RATING_LABELS[key] || ["Absent","Inconsistent","Strong"];
+}
+function areaFollowUpPrompt(rating) {
+  if (rating === "strong") return "What made that work?";
+  if (rating === "inconsistent") return "What made it hit and miss?";
+  if (rating === "absent") return "What got in the way?";
+  return "How so?";
+}
+const DEFAULT_NON_NEGOTIABLES = [
+  { text: "Sleep — 7+ hrs average per week, no phone in bed", status: "in" },
+  { text: "Hydration — 90+ oz of water every day", status: "in" },
+  { text: "Nutrition — eat clean: meat, vegetables, nuts, seeds, some fruit; avoid processed food and added sugar", status: "in" },
+  { text: "Movement — 1+ hr workout, 6 days a week", status: "in" },
+  { text: "Check-ins — check in with your community 6 days a week", status: "in" }
+];
+
+const state = {
+  fRatings: {},
+  fHowSo: {},
+  fSubIndex: 0,
+  showAddArea: false,
+  customAreas: [],
+  gapPicks: [],
+  practices: {},
+  time: "",
+  anchor: "",
+  backupTime: "",
+  backupAnchor: "",
+  nonNegotiables: DEFAULT_NON_NEGOTIABLES.map(x => ({...x})),
+  resetItems: ["No alcohol", "No processed food", "No refined sugar"],
+  resetMonth: "", resetDay: "", resetYear: "",
+  email: "",
+  roundCount: "",  // completed rounds, filled in after lookup
+  returningAfterGap: false  // true | false
+};
+let step = 0;
+const TOTAL_STEPS = 7;
+
+function allAreaKeys() {
+  return [...CORE_AREAS, ...state.customAreas];
+}
+function labelFor(key) { return key; }
+
+function renderProgress() {
+  const el = document.getElementById("progress");
+  el.innerHTML = "";
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    const d = document.createElement("div");
+    d.className = "dot" + (i <= step ? " active" : "");
+    el.appendChild(d);
+  }
+}
+
+function setRating(f, val) { state.fRatings[f] = val; render(); }
+function setHowSo(f, val) { state.fHowSo[f] = val; }
+
+function addCustomArea() {
+  const input = document.getElementById("customAreaInput");
+  const val = input.value.trim();
+  if (val && !allAreaKeys().includes(val)) {
+    state.customAreas.push(val);
+    state.showAddArea = false;
+    render();
+  }
+}
+
+function toggleGap(f) {
+  const idx = state.gapPicks.indexOf(f);
+  if (idx >= 0) state.gapPicks.splice(idx, 1);
+  else if (state.gapPicks.length < 5) state.gapPicks.push(f);
+  render();
+}
+
+function setPracticeField(key, field, val) {
+  if (!state.practices[key]) state.practices[key] = { practice: "", doneDefinition: "", amount: "" };
+  state.practices[key][field] = val;
+  updateNavButton();
+}
+
+function toggleNN(idx) {
+  state.nonNegotiables[idx].status = state.nonNegotiables[idx].status === "in" ? "out" : "in";
+  render();
+}
+function setNNText(idx, val) { state.nonNegotiables[idx].text = val; }
+function removeNN(idx) { state.nonNegotiables.splice(idx, 1); render(); }
+function addNN() {
+  const input = document.getElementById("newNNInput");
+  const val = input.value.trim();
+  if (val) { state.nonNegotiables.push({ text: val, status: "in" }); render(); }
+}
+
+function setResetItem(idx, val) { state.resetItems[idx] = val; }
+function addResetItem() {
+  state.resetItems.push("");
+  render();
+}
+function removeResetItem(idx) { state.resetItems.splice(idx, 1); render(); }
+function syncResetDate() { updateNavButton(); render(); }
+
+function canAdvance() {
+  if (step === 0) return state.email.trim().length > 3 && state.email.includes('@');
+  if (step === 1) {
+    const keys = allAreaKeys();
+    const key = keys[Math.min(state.fSubIndex, keys.length - 1)];
+    return !!state.fRatings[key];
+  }
+  if (step === 2) return state.gapPicks.length > 0;
+  if (step === 3) return true; // non-negotiables always have defaults
+  if (step === 4) return state.gapPicks.every(k => {
+    const p = state.practices[k];
+    return p && p.practice.trim().length > 0 && p.doneDefinition.trim().length > 0 && p.amount.trim().length > 0;
+  });
+  if (step === 5) return !!state.time && state.anchor.trim().length > 0;
+  if (step === 6) return !!state.backupTime && state.backupAnchor.trim().length > 0;
+  if (step === 7) return !!(state.resetMonth && state.resetDay && state.resetYear) && state.resetItems.some(r => r.trim().length > 0);
+  return true;
+}
+function updateNavButton() {
+  const btn = document.getElementById("nextBtn");
+  if (btn) btn.disabled = !canAdvance();
+}
+function next() {
+  if (!canAdvance()) return;
+  if (step === 1) {
+    const keys = allAreaKeys();
+    if (state.fSubIndex < keys.length - 1) { state.fSubIndex++; render(); return; }
+    step = 2; render(); return;
+  }
+  if (step <= TOTAL_STEPS) { step++; render(); }
+}
+function back() {
+  if (step === 1) {
+    if (state.fSubIndex > 0) { state.fSubIndex--; render(); }
+    else { step = 0; render(); }
+    return;
+  }
+  if (step === 2) {
+    step = 1;
+    state.fSubIndex = Math.max(0, allAreaKeys().length - 1);
+    render();
+    return;
+  }
+  if (step > 0) { step--; render(); }
+}
+
+function setReturningGap(val) { state.returningAfterGap = val; render(); }
+
+function renderStep0() {
+  return `
+    <div class="step-label">Step 0 of 7 — Who's Declaring</div>
+    <h1>What's your email?</h1>
+    <p class="sub">Takes about 5 minutes, one question at a time. If you're an MWOD member, this looks up your round history — not to gate you, just so the recommendation later fits where you actually are. Not a member? Enter any email and skip ahead.</p>
+    <div class="content">
+      <label class="field-label">Email</label>
+      <input type="text" placeholder="you@example.com" value="${state.email}" oninput="state.email=this.value; updateNavButton();">
+      <label class="field-label" style="margin-top:14px;">Rounds completed (if known)</label>
+      <input type="text" placeholder="e.g. 6 — leave blank if unsure or new" value="${state.roundCount}" oninput="state.roundCount=this.value; render();">
+    </div>
+  `;
+}
+
+function renderStep1() {
+  const keys = allAreaKeys();
+  const idx = Math.min(state.fSubIndex, keys.length - 1);
+  const key = keys[idx];
+  const rating = state.fRatings[key] || "";
+  const [lo, mid, hi] = ratingLabelsFor(key);
+  const followUp = rating ? `
+    <div>
+      <label class="followup-label">${areaFollowUpPrompt(rating)}</label>
+      <input type="text" class="how-so-large" placeholder="Say it plainly — one sentence is plenty." value="${state.fHowSo[key]||''}" oninput="setHowSo('${key}', this.value)">
+    </div>
+  ` : "";
+  const addBox = idx === keys.length - 1 ? (
+    state.showAddArea
+      ? `
+        <div class="add-own-row" style="margin-top:18px;">
+          <input type="text" id="customAreaInput" placeholder="Name the area (e.g. Sleep, Phone)">
+          <button onclick="addCustomArea()">+ Add</button>
+        </div>
+      `
+      : `<button class="text-link" onclick="state.showAddArea=true; render();">+ Track another area</button>`
+  ) : "";
+  return `
+    <div class="step-label">Look Back</div>
+    <div class="sub-progress">Question ${idx + 1} of ${keys.length}</div>
+    <h1>Recently, how's <span class="hl">${key}</span> actually gone?</h1>
+    <p class="sub">Rate what really happened — not how you wish it went.</p>
+    <div class="content">
+      <div class="big-rating-row">
+        <div class="seg-large">
+          <button class="${rating==='absent'?'sel':''}" onclick="setRating('${key}','absent')">${lo}</button>
+          <button class="${rating==='inconsistent'?'sel':''}" onclick="setRating('${key}','inconsistent')">${mid}</button>
+          <button class="${rating==='strong'?'sel':''}" onclick="setRating('${key}','strong')">${hi}</button>
+        </div>
+        ${followUp}
+      </div>
+      ${addBox}
+    </div>
+  `;
+}
+
+function tenureNudge() {
+  if (state.returningAfterGap === true) {
+    return `<div class="directive">You're coming back after time away — that resets the clock, regardless of how many rounds you've done before. Lean toward 1–2. Rebuild the streak before you rebuild the list.</div>`;
+  }
+  const n = parseInt(state.roundCount, 10);
+  if (isNaN(n)) return "";
+  if (n <= 1) return `<div class="directive">You're new to this. Lean toward picking just 1 — maybe 2. Consistency beats a long list right now.</div>`;
+  if (n <= 3) return `<div class="directive">A few rounds in. 1–2 is still a solid move — no need to max it out to prove something.</div>`;
+  return "";
+}
+
+function renderStep2() {
+  const keys = allAreaKeys();
+  const flagged = keys.filter(k => state.fRatings[k] === "inconsistent" || state.fRatings[k] === "absent");
+  const list = flagged.length ? flagged : keys.filter(k => state.fRatings[k]);
+  return `
+    <div class="step-label">Step 2 of 7 — Course Correct</div>
+    <h1>Where's the gap between who you're trying to become and what you actually did?</h1>
+    <p class="sub gap-hint">Pick 1 to 5 to put yourself on the hook for.</p>
+    <div class="mini-toggle-row">
+      <span class="mini-toggle-label">Coming back after time off?</span>
+      <div class="seg" style="max-width:140px;">
+        <button class="${state.returningAfterGap===true?'sel':''}" onclick="setReturningGap(true)">Yes</button>
+        <button class="${state.returningAfterGap===false?'sel':''}" onclick="setReturningGap(false)">No</button>
+      </div>
+    </div>
+    ${tenureNudge()}
+    <div class="content">
+      <div class="gap-list">
+        ${list.map(k => `
+          <div class="gap-option ${state.gapPicks.includes(k)?'sel':''}" onclick="toggleGap('${k}')">
+            ${labelFor(k)} <span class="tag">${state.fRatings[k]||''}</span>
+            ${state.fHowSo[k] ? `<span class="note">${state.fHowSo[k]}</span>` : ''}
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderStep3() {
+  return `
+    <div class="step-label">Step 3 of 7 — Non-Negotiables</div>
+    <h1>These are the things you never miss, no matter what.</h1>
+    <p class="sub">Suggested defaults below. Edit any of them, mark In or Out, or remove and add your own.</p>
+    <div class="content">
+      <div class="f-list">
+        ${state.nonNegotiables.map((nn, i) => `
+          <div class="nn-row">
+            <input type="text" class="nn-text" value="${nn.text.replace(/"/g,'&quot;')}" oninput="setNNText(${i}, this.value)">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <div class="nn-toggle">
+                <button class="${nn.status==='in'?'sel-in':''}" onclick="setNNText(${i}, document.querySelectorAll('.nn-text')[${i}].value); state.nonNegotiables[${i}].status='in'; render();">In</button>
+                <button class="${nn.status==='out'?'sel-out':''}" onclick="setNNText(${i}, document.querySelectorAll('.nn-text')[${i}].value); state.nonNegotiables[${i}].status='out'; render();">Out</button>
+              </div>
+              <button class="remove-x" onclick="removeNN(${i})">✕</button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+      <div class="add-own-row">
+        <input type="text" id="newNNInput" placeholder="Add your own non-negotiable">
+        <button onclick="addNN()">+ Add</button>
+      </div>
+    </div>
+  `;
+}
+
+function practiceBlock(key) {
+  const p = state.practices[key] || { practice: "", doneDefinition: "", amount: "" };
+  return `
+    <div class="f-row">
+      <div class="f-name" style="margin-bottom:10px;">${labelFor(key)}</div>
+      <label class="field-label">The practice</label>
+      <input type="text" placeholder="e.g. 20 min walk before checking my phone" value="${p.practice}" oninput="setPracticeField('${key}','practice',this.value)">
+      <label class="field-label">How will you know you've done it?</label>
+      <input type="text" placeholder="e.g. I logged it / it happened outside" value="${p.doneDefinition}" oninput="setPracticeField('${key}','doneDefinition',this.value)">
+      <label class="field-label">For how long, or how much?</label>
+      <input type="text" placeholder="e.g. 20 minutes, or 1hr, 10am-5pm" value="${p.amount}" oninput="setPracticeField('${key}','amount',this.value)">
+    </div>
+  `;
+}
+
+function renderStep4() {
+  const areas = state.gapPicks.map(labelFor).join(" & ") || "this area";
+  return `
+    <div class="step-label">Step 4 of 7 — Name The Practice</div>
+    <h1>Name a daily habit for ${areas}.</h1>
+    <p class="sub">Each one needs a little friction in it — not something you're already coasting on.</p>
+    <div class="content">
+      ${state.gapPicks.map(k => practiceBlock(k)).join("")}
+    </div>
+  `;
+}
+
+function renderStep5() {
+  return `
+    <div class="step-label">Step 5 of 7 — When</div>
+    <h1>What actual time does this happen?</h1>
+    <p class="sub">Tie it to something already fixed in your day.</p>
+    <div class="content">
+      <label class="field-label">Time</label>
+      <input type="time" value="${state.time}" oninput="state.time=this.value; updateNavButton();">
+      <label class="field-label">Tied to</label>
+      <input type="text" placeholder="e.g. right after I pour my coffee" value="${state.anchor}" oninput="state.anchor=this.value; updateNavButton();">
+    </div>
+  `;
+}
+
+function renderStep6() {
+  return `
+    <div class="step-label">Step 6 of 7 — When It Breaks</div>
+    <h1>Your day will get knocked off track sometimes. Decide the backup now.</h1>
+    <p class="sub">If today goes sideways, what's the backup time to still get this done?</p>
+    <div class="content">
+      <label class="field-label">Backup time</label>
+      <input type="time" value="${state.backupTime}" oninput="state.backupTime=this.value; updateNavButton();">
+      <label class="field-label">Tied to</label>
+      <input type="text" placeholder="e.g. right before I go to bed" value="${state.backupAnchor}" oninput="state.backupAnchor=this.value; updateNavButton();">
+    </div>
+  `;
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(dateStr + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return d;
+}
+function formatDate(d) {
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function renderStep7() {
+  let rangeHtml = "";
+  let resetDate = "";
+  if (state.resetMonth && state.resetDay && state.resetYear) {
+    resetDate = `${state.resetYear}-${String(state.resetMonth).padStart(2,'0')}-${String(state.resetDay).padStart(2,'0')}`;
+    const start = new Date(resetDate + "T00:00:00");
+    const end = addDays(resetDate, 27);
+    rangeHtml = `<div class="directive">Put this on your calendar now: <strong>${formatDate(start)}</strong> through <strong>${formatDate(end)}</strong>. Four complete, consecutive weeks. No exceptions.</div>`;
+  }
+  const monthOpts = MONTH_NAMES.map((m,i) => `<option value="${i+1}" ${Number(state.resetMonth)===i+1?'selected':''}>${m}</option>`).join("");
+  const dayOpts = Array.from({length:31}, (_,i)=>i+1).map(d => `<option value="${d}" ${Number(state.resetDay)===d?'selected':''}>${d}</option>`).join("");
+  const yearOpts = [26,27,28].map(y => `<option value="20${y}" ${Number(state.resetYear)===2000+y?'selected':''}>'${y}</option>`).join("");
+  return `
+    <div class="step-label">Step 7 of 7 — The Reset</div>
+    <h1>Pick 4 consecutive weeks this quarter to live at full strength — no exceptions.</h1>
+    <p class="sub">Suggested defaults below. Edit them to whatever full-strength means for you.</p>
+    <div class="content">
+      ${state.resetItems.map((item, i) => `
+        <div class="reset-item">
+          <input type="text" value="${item.replace(/"/g,'&quot;')}" oninput="setResetItem(${i}, this.value)" placeholder="e.g. No alcohol">
+          <button class="remove-x" onclick="removeResetItem(${i})">✕</button>
+        </div>
+      `).join("")}
+      <div class="add-own-row" style="margin-bottom:16px;">
+        <button onclick="addResetItem()" style="flex:none;">+ Add another</button>
+      </div>
+      <label class="field-label">Start date</label>
+      <div style="display:flex; gap:8px;">
+        <select onchange="state.resetMonth=this.value; syncResetDate();">
+          <option value="">Month</option>${monthOpts}
+        </select>
+        <select onchange="state.resetDay=this.value; syncResetDate();">
+          <option value="">Day</option>${dayOpts}
+        </select>
+        <select onchange="state.resetYear=this.value; syncResetDate();">
+          <option value="">Year</option>${yearOpts}
+        </select>
+      </div>
+      ${rangeHtml}
+    </div>
+  `;
+}
+
+function renderResult() {
+  const baselineKeys = allAreaKeys().filter(k => state.fRatings[k]);
+  const baselineDetails = baselineKeys.map(k => {
+    const rating = state.fRatings[k];
+    const note = state.fHowSo[k] ? ` — ${state.fHowSo[k]}` : " — (nothing noted)";
+    return `<strong>${labelFor(k)}</strong> (${rating})${note}`;
+  }).join("<br>");
+  const gapDetails = state.gapPicks.map(k => {
+    const rating = state.fRatings[k];
+    const note = state.fHowSo[k] ? ` — ${state.fHowSo[k]}` : "";
+    return `${labelFor(k)}: ${rating}${note}`;
+  }).join("<br>");
+  let resetRangeText = "—";
+  if (state.resetMonth && state.resetDay && state.resetYear) {
+    const resetDate = `${state.resetYear}-${String(state.resetMonth).padStart(2,'0')}-${String(state.resetDay).padStart(2,'0')}`;
+    const start = new Date(resetDate + "T00:00:00");
+    const end = addDays(resetDate, 27);
+    resetRangeText = `${formatDate(start)} → ${formatDate(end)}`;
+  }
+  const nnIn = state.nonNegotiables.filter(nn => nn.status === "in");
+  const nnOut = state.nonNegotiables.filter(nn => nn.status === "out");
+
+  return `
+    <div class="payoff-heading">Your Daily Practice — Locked In</div>
+    <h1>Here's what you just committed to.</h1>
+    <p class="sub">Save it, screenshot it, put it somewhere you'll actually see it.</p>
+    <div class="content">
+      <div class="result-block">
+        <div class="result-label">Look Back</div>
+        <div class="result-value" style="font-size:14px;">${baselineDetails}</div>
+      </div>
+      <div class="result-block">
+        <div class="result-label">Non-Negotiables</div>
+        <div class="result-value" style="font-size:14px;">
+          ${nnIn.map(nn => `✓ ${nn.text}`).join("<br>")}
+          ${nnOut.length ? `<br><span style="color:var(--muted);">Out: ${nnOut.map(nn=>nn.text).join(', ')}</span>` : ''}
+        </div>
+      </div>
+      <div class="result-block">
+        <div class="result-label">Course Correction</div>
+        <div class="result-value">${gapDetails}</div>
+      </div>
+      ${state.gapPicks.map(k => {
+        const p = state.practices[k] || { practice: "", doneDefinition: "", amount: "" };
+        return `
+        <div class="result-block">
+          <div class="result-label">Practice — ${labelFor(k)}</div>
+          <div class="result-value">${p.practice}</div>
+          <div class="result-value" style="margin-top:6px; font-size:13px; color: var(--muted);">Done when: ${p.doneDefinition} — ${p.amount}</div>
+        </div>
+      `;
+      }).join("")}
+      <div class="result-block">
+        <div class="result-label">When</div>
+        <div class="result-value">${state.time || "—"} · ${state.anchor}</div>
+      </div>
+      <div class="result-block">
+        <div class="result-label">When It Breaks</div>
+        <div class="result-value">${state.backupTime || "—"} · ${state.backupAnchor}</div>
+      </div>
+      <div class="result-block">
+        <div class="result-label">The Reset — 4 Weeks</div>
+        <div class="result-value">${resetRangeText}</div>
+        <div class="result-value" style="margin-top:6px; font-size:13px; color: var(--muted);">${state.resetItems.filter(r=>r.trim()).join(' · ')}</div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="nav secondary" onclick="step=1; state.fSubIndex=0; render();">Start Over</button>
+      <div></div>
+    </div>
+  `;
+}
+
+function render() {
+  renderProgress();
+  const card = document.getElementById("card");
+  let html = "";
+  if (step === 0) html = renderStep0();
+  else if (step === 1) html = renderStep1();
+  else if (step === 2) html = renderStep2();
+  else if (step === 3) html = renderStep3();
+  else if (step === 4) html = renderStep4();
+  else if (step === 5) html = renderStep5();
+  else if (step === 6) html = renderStep6();
+  else if (step === 7) html = renderStep7();
+  else html = renderResult();
+
+  if (step <= TOTAL_STEPS) {
+    html += `
+      <div class="btn-row">
+        <button class="nav secondary" onclick="back()" ${step===0?'disabled':''}>Back</button>
+        <button class="nav primary" id="nextBtn" onclick="next()" ${canAdvance()?'':'disabled'}>${step===TOTAL_STEPS?'See My Practice':'Next'}</button>
+      </div>
+    `;
+  }
+  card.innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>

@@ -827,7 +827,7 @@ function askGapPicks() {
     const keys = allAreaKeys();
     const flagged = keys.filter(k => state.fRatings[k] === 'inconsistent' || state.fRatings[k] === 'absent');
     const list = flagged.length ? flagged : keys.filter(k => state.fRatings[k]);
-    askQuestion("Where's the gap between who you're trying to become and what you actually did? Pick 1 to 5.", {
+    askQuestion("Which of these do you want to build a specific daily habit around this time? Pick 1 to 5 — we'll build the actual practice for each one next.", {
       type: 'multichips', selected: [], min: 1, max: 5,
       options: list.map(k => ({label: k, value: k})),
       onSubmit: (vals) => { state.gapPicks = vals; askNonNegotiables(); }

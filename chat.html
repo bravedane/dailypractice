@@ -1154,7 +1154,7 @@ function askTimingForArea(idx) {
   });
 }
 function askReset() {
-  askQuestion("Last one — this one's for MWOD members. Act Like a FUTURE: pick 4 weeks in a row this round to go all in, no exceptions. Here's the default list, edit it to whatever going all in means for you.", {
+  askQuestion("Last question (this one's for just for MWOD members): For your Act Like A FUTURE (ALAF) Weeks, your job is to commit to 4 consecutive weeks when you'll be on the hook to act like a future. Choose what that means for you below. The dates are coming next.", {
     type: 'reset-card',
     onSubmit: () => { askResetDate(); }
   });

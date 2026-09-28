@@ -453,15 +453,16 @@ function goBack() {
 function computeStepTotal() {
   const areaCount = allAreaKeys().length;
   const gapCount = state.gapPicks.length || 2; // estimate before chosen
+  const resetSteps = state.isMember ? 2 : 0; // reset list + reset date, members only
   return 1                    // round count
        + areaCount * 2        // rating + follow-up per area
        + 1                    // add-another-area prompt
-       + 1                    // returning-after-gap
-       + 1                    // gap picks
        + 1                    // non-negotiables
+       + (state.isMember ? 1 : 0) // returning-after-gap, members only
+       + 1                    // gap picks
        + gapCount              // one step per practice card
-       + 4                     // when time, when anchor, backup time, backup anchor
-       + 2;                    // reset list, reset date
+       + gapCount * 4          // when time, when anchor, backup time, backup anchor — per habit
+       + resetSteps;
 }
 function updateProgressBar() {
   const total = computeStepTotal();
@@ -695,14 +696,43 @@ function addNN() {
 }
 
 // --- Practice card ---
+// Rule-based starter draft, built from the area + the rating they gave it,
+// so the practice card opens with a real recommendation instead of a blank
+// form with only generic placeholder text. Still fully editable — this is
+// a draft, not a mandate.
+const PRACTICE_DRAFTS = {
+  "Fitness":     { practice: "20-30 minutes of real movement — a workout, a walk, something that raises your heart rate", doneDefinition: "I did the session, even if it was short", amount: "20-30 minutes" },
+  "Food":        { practice: "One fully clean, home-made meal — no processed food, no added sugar", doneDefinition: "I ate the meal and skipped the shortcuts", amount: "once a day" },
+  "Sleep":       { practice: "Phone away and lights out by a set time", doneDefinition: "I was in bed, phone out of reach, by that time", amount: "7+ hours" },
+  "Hydration":   { practice: "Water before coffee, tracked through the day", doneDefinition: "I hit the ounces I set for myself", amount: "90+ oz" },
+  "Family":      { practice: "One undistracted stretch of time with family — phone away, full attention", doneDefinition: "It happened, and I wasn't half-present", amount: "15-20 minutes" },
+  "Friends":     { practice: "Reach out to one friend — a real message or a call, not just a like", doneDefinition: "I sent it or made the call", amount: "once a day" },
+  "Faith":       { practice: "A short reading, reflection, or prayer practice", doneDefinition: "I actually did it, not just thought about it", amount: "10-15 minutes" },
+  "Work":        { practice: "One focused block on your top priority, distractions off", doneDefinition: "The block happened and I stayed in it", amount: "45-60 minutes" },
+  "Frenemies":   { practice: "Notice the pattern when it shows up, and name it — to yourself at minimum", doneDefinition: "I caught it in the moment instead of after", amount: "as it comes up" },
+  "Money":       { practice: "Check your actual numbers and write down what you see", doneDefinition: "I looked, and I wrote it down — no skipping the uncomfortable part", amount: "5 minutes" },
+  "Projects":    { practice: "Visible forward progress on one personal project", doneDefinition: "Something changed that wasn't there before", amount: "20-30 minutes" },
+  "Relationships": { practice: "Intentional time with your partner, phone away", doneDefinition: "We connected without a screen between us", amount: "20-30 minutes" },
+  "Phone":       { practice: "A defined phone-free window", doneDefinition: "The phone was actually away, not just face-down", amount: "the window you set" }
+};
+function defaultPracticeDraftFor(key) {
+  return PRACTICE_DRAFTS[key] || {
+    practice: `A small, specific daily action for ${key}`,
+    doneDefinition: "I can point to the specific thing I did",
+    amount: "a few minutes, same time each day"
+  };
+}
 function renderPracticeCard(key) {
-  const p = state.practices[key] || { practice: "", doneDefinition: "", amount: "" };
-  state.practices[key] = p;
+  if (!state.practices[key]) {
+    state.practices[key] = defaultPracticeDraftFor(key);
+  }
+  const p = state.practices[key];
   const el = document.getElementById('inputArea');
   const ready = p.practice.trim() && p.doneDefinition.trim() && p.amount.trim();
   el.innerHTML = `
     ${backButtonHtml()}
     <div class="card">
+      <div style="font-size:12px; color:var(--muted); margin-bottom:10px;">Here's a starting draft — change anything that doesn't fit.</div>
       <label class="field-label">The practice</label>
       <input type="text" placeholder="e.g. 20 min walk before checking my phone" value="${escapeHtml(p.practice)}" oninput="state.practices['${key}'].practice=this.value; renderPracticeCardBtn();">
       <label class="field-label">How will you know you've done it?</label>

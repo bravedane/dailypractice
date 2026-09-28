@@ -500,6 +500,9 @@ const state = {
   gapPicks: [],
   practices: {},
   timing: {},
+  customRemovals: [],
+  removalPicks: [],
+  removalWhy: {},
   nonNegotiables: DEFAULT_NN.map(x => ({...x})),
   resetItems: ["No alcohol", "No processed food", "No refined sugar"],
   resetMonth: "", resetDay: "", resetYear: "",
@@ -991,11 +994,63 @@ function askAddAnotherArea() {
     options: [{label: '+ Add another', value: 'add'}, {label: "I'm done", value: 'done'}],
     onSubmit: (val) => {
       if (val === 'add') askCustomAreaName();
+      else askRemovalsIntro();
+    }
+  });
+}
+
+// --- Anything to remove (subtraction goals: alcohol, substances, gambling,
+// toxic relationships, etc.) — a separate question shape from the areas
+// above, because quitting/reducing something isn't a habit to build, it's
+// a boundary to declare. Kept optional and low-pressure. ---
+const REMOVAL_SUGGESTIONS = ["Alcohol", "Drugs / Substances", "Gambling", "A Toxic Relationship", "Screen / Media Bingeing"];
+function askRemovalsIntro() {
+  askQuestion("Is there anything you're actively trying to cut out or reduce right now? Alcohol, gambling, a toxic relationship — whatever it is.", {
+    type: 'chips',
+    options: [{label: 'Yes', value: true}, {label: 'No, not right now', value: false}],
+    onSubmit: (val) => {
+      if (val) askRemovalsPick();
       else if (state.isMember) askReturningGap();
       else askGapPicks();
     }
   });
 }
+function askRemovalsPick() {
+  const options = [...REMOVAL_SUGGESTIONS, ...state.customRemovals].map(r => ({label: r, value: r}));
+  askQuestion("Pick what applies — or add your own if it's not listed.", {
+    type: 'multichips', selected: [], min: 1, max: 8,
+    options,
+    onSubmit: (vals) => { state.removalPicks = vals; askAddCustomRemoval(); }
+  });
+}
+function askAddCustomRemoval() {
+  askQuestion("Anything else to add to that list? Type it, or say no to move on.", {
+    type: 'text-optional', placeholder: 'e.g. a specific habit only you would name',
+    onSubmit: (val) => {
+      if (val && val !== '(skipped)' && val.trim()) {
+        const item = val.trim();
+        state.customRemovals.push(item);
+        state.removalPicks.push(item);
+      }
+      askRemovalWhy(0);
+    }
+  });
+}
+function askRemovalWhy(idx) {
+  if (idx >= state.removalPicks.length) {
+    if (state.isMember) askReturningGap(); else askGapPicks();
+    return;
+  }
+  const item = state.removalPicks[idx];
+  askQuestion(`What's going on with **${item}**? The more specific you are, the better this ends up serving you.`, {
+    type: 'text-optional', placeholder: 'One sentence is plenty',
+    onSubmit: (val) => {
+      state.removalWhy[item] = (val && val !== '(skipped)') ? val : '';
+      askRemovalWhy(idx + 1);
+    }
+  });
+}
+
 function askCustomAreaName() {
   askQuestion("What should we call it?", {
     type: 'text', placeholder: 'e.g. Creativity, Rest, Screen Time',
@@ -1130,6 +1185,7 @@ function showResult() {
       const t = state.timing[k] || {};
       return `<div class="result-block"><div class="result-label">Practice — ${escapeHtml(k)}</div><div class="result-value">${escapeHtml(p.practice)}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">Done when: ${escapeHtml(p.doneDefinition)} — ${escapeHtml(p.amount)}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">When: ${t.time || "—"} · ${escapeHtml(t.anchor||'')} — Backup: ${t.backupTime || "—"} · ${escapeHtml(t.backupAnchor||'')}</div></div>`;
     }).join("")}
+    ${state.removalPicks.length ? `<div class="result-block"><div class="result-label">Cutting Out / Reducing</div><div class="result-value" style="font-size:13px;">${state.removalPicks.map(item => `${escapeHtml(item)}${state.removalWhy[item] ? ' — ' + escapeHtml(state.removalWhy[item]) : ''}`).join('<br>')}</div></div>` : ''}
     ${state.isMember ? `<div class="result-block"><div class="result-label">Act Like a FUTURE — 4 Weeks</div><div class="result-value">${resetRangeText}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">${state.resetItems.filter(r=>r.trim()).map(escapeHtml).join(' · ')}</div></div>` : ''}
   `;
 
@@ -1200,6 +1256,13 @@ function showResult() {
       <div class="doc-section-title">Your Practices — What, When, Backup</div>
       ${practicePrintRows}
     </div>
+
+    ${state.removalPicks.length ? `
+    <div class="doc-section">
+      <div class="doc-section-title">Cutting Out / Reducing</div>
+      ${state.removalPicks.map(item => `<div class="doc-habit-row"><div class="doc-habit-name">${escapeHtml(item)}</div><div class="doc-habit-detail">${escapeHtml(state.removalWhy[item]||'')}</div></div>`).join('')}
+    </div>
+    ` : ''}
 
     ${state.isMember ? `
     <div class="doc-section">
@@ -1278,6 +1341,9 @@ function restart() {
   state.resetItems = ["No alcohol", "No processed food", "No refined sugar"];
   state.resetMonth = ""; state.resetDay = ""; state.resetYear = ""; state.resetDateStr = "";
   state.timing = {};
+  state.customRemovals = [];
+  state.removalPicks = [];
+  state.removalWhy = {};
   state.pending = null;
   state.stepNum = 0;
   state.history = [];

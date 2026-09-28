@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Daily Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: 'Schabo Condensed';
+    src: url('assets/SCHABO-Condensed.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+  }
+  :root {
+    --bg: #0c0c0c;
+    --surface: #171717;
+    --surface-2: #1d1d1d;
+    --border: #2a2a2a;
+    --gold: #ffd627;
+    --text: #f7f7f7;
+    --muted: #9a9a9a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    background-image: radial-gradient(circle at 15% -10%, rgba(255, 214, 39, 0.07), transparent 45%);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  .app {
+    max-width: 600px;
+    margin: 0 auto;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .header img { height: 18px; opacity: 0.92; }
+  .header .divider { width: 1px; height: 14px; background: var(--border); }
+  .header .tagline {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .row { display: flex; }
+  .row.george { justify-content: flex-start; }
+  .row.user { justify-content: flex-end; }
+  .avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #171717;
+    font-family: 'Schabo Condensed', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-right: 8px;
+    margin-top: 2px;
+  }
+  .bubble {
+    max-width: 78%;
+    padding: 11px 14px;
+    border-radius: 14px;
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  .bubble .hl { color: var(--gold); font-weight: 600; }
+  .row.george .bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+  }
+  .row.user .bubble {
+    background: var(--gold);
+    color: #171717;
+    font-weight: 500;
+    border-top-right-radius: 4px;
+  }
+  .typing-dots {
+    display: flex;
+    gap: 4px;
+    padding: 4px 2px;
+  }
+  .typing-dots span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: bounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+  .card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .card + .card { margin-top: 8px; }
+  .input-area {
+    border-top: 1px solid var(--border);
+    padding: 12px 16px 16px;
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 20px;
+    padding: 9px 16px;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .chip:hover { border-color: var(--gold); }
+  .chip.sel {
+    background: var(--gold);
+    color: #171717;
+    border-color: var(--gold);
+    font-weight: 700;
+  }
+  .text-row {
+    display: flex;
+    gap: 8px;
+  }
+  .text-row input[type=text], .text-row input[type=time] {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    color: var(--text);
+    padding: 11px 16px;
+    font-size: 14.5px;
+  }
+  .text-row input:focus { outline: none; border-color: var(--gold); }
+  button.send {
+    background: var(--gold);
+    color: #171717;
+    border: none;
+    border-radius: 22px;
+    padding: 0 20px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  button.send:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.send.ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .continue-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+  .field-label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .nn-row, .reset-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .nn-row:last-child, .reset-row:last-child { border-bottom: none; }
+  .card input[type=text] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .nn-toggle { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+  .nn-toggle button { background: transparent; border: none; color: var(--muted); font-size: 11px; padding: 6px 10px; cursor: pointer; }
+  .nn-toggle button.sel-in { background: var(--gold); color: #171717; font-weight: 700; }
+  .nn-toggle button.sel-out { background: #3a1f1f; color: #ff8080; font-weight: 700; }
+  .remove-x { background: none; border: none; color: #6b6b6b; cursor: pointer; font-size: 15px; padding: 0 4px; flex-shrink: 0; }
+  .add-row { display: flex; gap: 6px; margin-top: 4px; }
+  .add-row input { margin-bottom: 0 !important; flex: 1; }
+  .add-row button { background: transparent; border: 1px solid var(--border); color: var(--gold); border-radius: 8px; padding: 0 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  select.date-sel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 6px;
+    font-size: 13px;
+  }
+  .directive {
+    background: rgba(255, 214, 39, 0.1);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    padding: 10px 13px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .result-block { margin-bottom: 10px; }
+  .result-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+  .result-value { font-size: 14px; line-height: 1.4; }
+  .progress-hint {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 2px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <img src="assets/mwod-logo-white.svg" alt="MWOD">
+    <div class="divider"></div>
+    <div class="tagline">Your Daily Practice</div>
+  </div>
+  <div class="scroll" id="scroll"></div>
+  <div class="input-area" id="inputArea"></div>
+</div>
+
+<script>
+const CORE_AREAS = ["Fitness","Food","Family","Friends","Faith","Work","Frenemies","Money","Projects","Relationships","Phone"];
+const RATING_LABELS = {
+  "Fitness": ["Absent","Inconsistent","Strong"],
+  "Food": ["Careless","Inconsistent","Clean"],
+  "Family": ["Distant","Inconsistent","Present"],
+  "Friends": ["Isolated","Inconsistent","Connected"],
+  "Faith": ["Dormant","Inconsistent","Grounded"],
+  "Work": ["Behind","Treading Water","On Top Of It"],
+  "Frenemies": ["Overexposed","Managing","Protected"],
+  "Money": ["Avoiding It","Inconsistent","In Control"],
+  "Projects": ["Stalled","Moving","On Track"],
+  "Relationships": ["Neglected","Inconsistent","Invested"],
+  "Phone": ["Out Of Control","Some Control","Disciplined"]
+};
+function ratingLabelsFor(key) { return RATING_LABELS[key] || ["Absent","Inconsistent","Strong"]; }
+function areaFollowUpPrompt(rating) {
+  if (rating === "strong") return "What made that work?";
+  if (rating === "inconsistent") return "What made it hit and miss?";
+  return "What got in the way?";
+}
+const DEFAULT_NN = [
+  { text: "Sleep — 7+ hrs average per week, no phone in bed", status: "in" },
+  { text: "Hydration — 90+ oz of water every day", status: "in" },
+  { text: "Nutrition — eat clean: meat, vegetables, nuts, seeds, some fruit; avoid processed food and added sugar", status: "in" },
+  { text: "Movement — 1+ hr workout, 6 days a week", status: "in" },
+  { text: "Check-ins — check in with your community 6 days a week", status: "in" }
+];
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+const state = {
+  transcript: [],
+  customAreas: [],
+  fRatings: {},
+  fHowSo: {},
+  roundCount: "",
+  returningAfterGap: false,
+  gapPicks: [],
+  practices: {},
+  nonNegotiables: DEFAULT_NN.map(x => ({...x})),
+  resetItems: ["No alcohol", "No processed food", "No refined sugar"],
+  resetMonth: "", resetDay: "", resetYear: "",
+  time: "", anchor: "", backupTime: "", backupAnchor: "",
+  pending: null,
+  qCount: 0
+};
+let uidCounter = 0;
+
+function allAreaKeys() { return [...CORE_AREAS, ...state.customAreas]; }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatGeorgeText(text) {
+  return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<span class="hl">$1</span>');
+}
+
+function scrollBottom() {
+  const el = document.getElementById('scroll');
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderTranscript() {
+  const el = document.getElementById('scroll');
+  el.innerHTML = state.transcript.map(t => {
+    if (t.typing) {
+      return `<div class="row george"><div class="avatar">G</div><div class="bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div></div>`;
+    }
+    if (t.who === 'george') {
+      return `<div class="row george"><div class="avatar">G</div><div class="bubble">${t.html}</div></div>`;
+    }
+    return `<div class="row user"><div class="bubble">${t.html}</div></div>`;
+  }).join('');
+  scrollBottom();
+}
+
+function pushGeorge(text, after) {
+  const id = 'g' + (++uidCounter);
+  state.transcript.push({ who: 'george', typing: true, id });
+  renderTranscript();
+  setTimeout(() => {
+    const entry = state.transcript.find(x => x.id === id);
+    entry.typing = false;
+    entry.html = formatGeorgeText(text);
+    renderTranscript();
+    if (after) after();
+  }, 550);
+}
+
+function pushGeorgeCard(html, after) {
+  const id = 'g' + (++uidCounter);
+  state.transcript.push({ who: 'george', typing: true, id });
+  renderTranscript();
+  setTimeout(() => {
+    const entry = state.transcript.find(x => x.id === id);
+    entry.typing = false;
+    entry.html = html;
+    renderTranscript();
+    if (after) after();
+  }, 550);
+}
+
+function pushUser(text) {
+  state.transcript.push({ who: 'user', html: escapeHtml(text) });
+  renderTranscript();
+}
+
+function clearInputArea() {
+  document.getElementById('inputArea').innerHTML = '';
+}
+
+function askQuestion(text, pending) {
+  document.getElementById('inputArea').innerHTML = '';
+  pushGeorge(text, () => {
+    state.pending = pending;
+    if (pending.type === 'multichips') pending.selected = pending.selected || [];
+    renderInputArea();
+  });
+}
+
+function askCard(introText, cardHtmlFn, pending) {
+  document.getElementById('inputArea').innerHTML = '';
+  pushGeorge(introText, () => {
+    state.pending = pending;
+    renderInputArea();
+  });
+}
+
+function submitPending(value, displayLabel) {
+  pushUser(displayLabel !== undefined ? displayLabel : String(value));
+  const p = state.pending;
+  state.pending = null;
+  clearInputArea();
+  p.onSubmit(value);
+}
+
+function renderInputArea() {
+  const p = state.pending;
+  const el = document.getElementById('inputArea');
+  if (!p) { el.innerHTML = ''; return; }
+
+  if (p.type === 'chips') {
+    el.innerHTML = `<div class="chip-row">${p.options.map(o =>
+      `<button class="chip" onclick="submitPending(${JSON.stringify(o.value)}, ${JSON.stringify(o.label)})">${o.label}</button>`
+    ).join('')}</div>`;
+    return;
+  }
+
+  if (p.type === 'multichips') {
+    const sel = p.selected;
+    el.innerHTML = `
+      <div class="chip-row" id="mcRow">${p.options.map(o => {
+        const isSel = sel.includes(o.value);
+        return `<button class="chip ${isSel?'sel':''}" onclick="toggleMultiChip(${JSON.stringify(o.value)})">${o.label}</button>`;
+      }).join('')}</div>
+      <div class="continue-row">
+        <button class="send" id="mcContinue" onclick="submitMultiChip()" ${sel.length<1?'disabled':''}>Continue</button>
+      </div>
+    `;
+    return;
+  }
+
+  if (p.type === 'text' || p.type === 'text-optional') {
+    const optional = p.type === 'text-optional';
+    el.innerHTML = `
+      <div class="text-row">
+        <input type="text" id="textInput" placeholder="${p.placeholder||''}" autocomplete="off" onkeydown="if(event.key==='Enter') submitTextInput()">
+        <button class="send" onclick="submitTextInput()">${optional?'Send':'Send'}</button>
+      </div>
+    `;
+    setTimeout(() => { const i = document.getElementById('textInput'); if (i) i.focus(); }, 50);
+    return;
+  }
+
+  if (p.type === 'time') {
+    el.innerHTML = `
+      <div class="text-row">
+        <input type="time" id="timeInput">
+        <button class="send" onclick="submitTimeInput()">Send</button>
+      </div>
+    `;
+    return;
+  }
+
+  if (p.type === 'nn-card') { renderNNCard(); return; }
+  if (p.type === 'practice-card') { renderPracticeCard(p.key); return; }
+  if (p.type === 'reset-card') { renderResetCard(); return; }
+  if (p.type === 'date3') { renderDate3(); return; }
+}
+
+function toggleMultiChip(val) {
+  const p = state.pending;
+  const idx = p.selected.indexOf(val);
+  if (idx >= 0) p.selected.splice(idx, 1);
+  else if (p.selected.length < (p.max || 5)) p.selected.push(val);
+  renderInputArea();
+}
+function submitMultiChip() {
+  const p = state.pending;
+  if (p.selected.length < 1) return;
+  submitPending(p.selected.slice(), p.selected.join(', '));
+}
+function submitTextInput() {
+  const i = document.getElementById('textInput');
+  const val = i.value.trim();
+  submitPending(val, val || '(skipped)');
+}
+function submitTimeInput() {
+  const i = document.getElementById('timeInput');
+  if (!i.value) return;
+  submitPending(i.value, i.value);
+}
+
+// --- Non-negotiables card ---
+function renderNNCard() {
+  const el = document.getElementById('inputArea');
+  el.innerHTML = `
+    <div class="card">
+      ${state.nonNegotiables.map((nn,i) => `
+        <div class="nn-row">
+          <input type="text" value="${escapeHtml(nn.text)}" oninput="state.nonNegotiables[${i}].text=this.value">
+          <div class="nn-toggle">
+            <button class="${nn.status==='in'?'sel-in':''}" onclick="setNNStatus(${i},'in')">In</button>
+            <button class="${nn.status==='out'?'sel-out':''}" onclick="setNNStatus(${i},'out')">Out</button>
+          </div>
+          <button class="remove-x" onclick="removeNN(${i})">✕</button>
+        </div>
+      `).join('')}
+      <div class="add-row">
+        <input type="text" id="newNNInput" placeholder="Add your own non-negotiable">
+        <button onclick="addNN()">+ Add</button>
+      </div>
+    </div>
+    <div class="continue-row"><button class="send" onclick="submitPending(true,'Non-negotiables set ✓')">Continue</button></div>
+  `;
+}
+function setNNStatus(i, val) { state.nonNegotiables[i].status = val; renderNNCard(); }
+function removeNN(i) { state.nonNegotiables.splice(i,1); renderNNCard(); }
+function addNN() {
+  const inp = document.getElementById('newNNInput');
+  const val = inp.value.trim();
+  if (val) { state.nonNegotiables.push({text: val, status: 'in'}); renderNNCard(); }
+}
+
+// --- Practice card ---
+function renderPracticeCard(key) {
+  const p = state.practices[key] || { practice: "", doneDefinition: "", amount: "" };
+  state.practices[key] = p;
+  const el = document.getElementById('inputArea');
+  const ready = p.practice.trim() && p.doneDefinition.trim() && p.amount.trim();
+  el.innerHTML = `
+    <div class="card">
+      <label class="field-label">The practice</label>
+      <input type="text" placeholder="e.g. 20 min walk before checking my phone" value="${escapeHtml(p.practice)}" oninput="state.practices['${key}'].practice=this.value; renderPracticeCardBtn();">
+      <label class="field-label">How will you know you've done it?</label>
+      <input type="text" placeholder="e.g. I logged it / it happened outside" value="${escapeHtml(p.doneDefinition)}" oninput="state.practices['${key}'].doneDefinition=this.value; renderPracticeCardBtn();">
+      <label class="field-label">For how long, or how much?</label>
+      <input type="text" placeholder="e.g. 20 minutes, or 1hr, 10am-5pm" value="${escapeHtml(p.amount)}" oninput="state.practices['${key}'].amount=this.value; renderPracticeCardBtn();">
+    </div>
+    <div class="continue-row"><button class="send" id="practiceBtn" ${ready?'':'disabled'} onclick="submitPending(true,'Practice set for ${key} ✓')">Continue</button></div>
+  `;
+}
+function renderPracticeCardBtn() {
+  const p = state.pending;
+  if (!p || p.type !== 'practice-card') return;
+  const pr = state.practices[p.key];
+  const btn = document.getElementById('practiceBtn');
+  if (btn) btn.disabled = !(pr.practice.trim() && pr.doneDefinition.trim() && pr.amount.trim());
+}
+
+// --- Reset card ---
+function renderResetCard() {
+  const el = document.getElementById('inputArea');
+  const anyFilled = state.resetItems.some(r => r.trim());
+  el.innerHTML = `
+    <div class="card">
+      ${state.resetItems.map((item,i) => `
+        <div class="reset-row">
+          <input type="text" value="${escapeHtml(item)}" placeholder="e.g. No alcohol" oninput="state.resetItems[${i}]=this.value; renderResetBtn();">
+          <button class="remove-x" onclick="removeResetItem(${i})">✕</button>
+        </div>
+      `).join('')}
+      <div class="add-row"><button onclick="addResetItem()" style="flex:none;">+ Add another</button></div>
+    </div>
+    <div class="continue-row"><button class="send" id="resetBtn" ${anyFilled?'':'disabled'} onclick="submitPending(true,'Reset list set ✓')">Continue</button></div>
+  `;
+}
+function removeResetItem(i) { state.resetItems.splice(i,1); renderResetCard(); }
+function addResetItem() { state.resetItems.push(""); renderResetCard(); }
+function renderResetBtn() {
+  const btn = document.getElementById('resetBtn');
+  if (btn) btn.disabled = !state.resetItems.some(r => r.trim());
+}
+
+// --- Date3 (reset start date) ---
+function renderDate3() {
+  const el = document.getElementById('inputArea');
+  const monthOpts = MONTH_NAMES.map((m,i) => `<option value="${i+1}" ${Number(state.resetMonth)===i+1?'selected':''}>${m}</option>`).join('');
+  const dayOpts = Array.from({length:31},(_,i)=>i+1).map(d => `<option value="${d}" ${Number(state.resetDay)===d?'selected':''}>${d}</option>`).join('');
+  const yearOpts = [26,27,28].map(y => `<option value="20${y}" ${Number(state.resetYear)===2000+y?'selected':''}>'${y}</option>`).join('');
+  const ready = state.resetMonth && state.resetDay && state.resetYear;
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex; gap:8px;">
+        <select class="date-sel" style="flex:2;" onchange="state.resetMonth=this.value; renderDate3();"><option value="">Month</option>${monthOpts}</select>
+        <select class="date-sel" style="flex:1;" onchange="state.resetDay=this.value; renderDate3();"><option value="">Day</option>${dayOpts}</select>
+        <select class="date-sel" style="flex:1;" onchange="state.resetYear=this.value; renderDate3();"><option value="">Year</option>${yearOpts}</select>
+      </div>
+    </div>
+    <div class="continue-row"><button class="send" ${ready?'':'disabled'} onclick="confirmDate3()">Send</button></div>
+  `;
+}
+function addDays(dateStr, days) { const d = new Date(dateStr+"T00:00:00"); d.setDate(d.getDate()+days); return d; }
+function formatDate(d) { return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }); }
+function confirmDate3() {
+  const resetDate = `${state.resetYear}-${String(state.resetMonth).padStart(2,'0')}-${String(state.resetDay).padStart(2,'0')}`;
+  const start = new Date(resetDate+"T00:00:00");
+  const label = formatDate(start);
+  submitPending(resetDate, label);
+}
+
+// ===== FLOW =====
+function startFlow() {
+  pushGeorge("Hey — let's build your practice for this round. I'll ask one thing at a time, should take about 5 minutes.", () => {
+    setTimeout(askRoundCount, 500);
+  });
+}
+
+function askRoundCount() {
+  askQuestion("First — how many rounds have you completed? Totally fine to skip if you're new or not sure.", {
+    type: 'text-optional', placeholder: 'e.g. 6',
+    onSubmit: (val) => { state.roundCount = val === '(skipped)' ? '' : val; askArea(0); }
+  });
+}
+
+function askArea(idx) {
+  const keys = allAreaKeys();
+  if (idx >= keys.length) { askAddAnotherArea(); return; }
+  const key = keys[idx];
+  const [lo, mid, hi] = ratingLabelsFor(key);
+  askQuestion(`Recently, how's **${key}** actually gone?`, {
+    type: 'chips',
+    options: [{label: lo, value: 'absent'}, {label: mid, value: 'inconsistent'}, {label: hi, value: 'strong'}],
+    onSubmit: (val) => { state.fRatings[key] = val; askFollowUp(key, val, idx); }
+  });
+}
+function askFollowUp(key, rating, idx) {
+  askQuestion(areaFollowUpPrompt(rating), {
+    type: 'text-optional', placeholder: 'One sentence is plenty',
+    onSubmit: (val) => { state.fHowSo[key] = val === '(skipped)' ? '' : val; askArea(idx + 1); }
+  });
+}
+function askAddAnotherArea() {
+  askQuestion("Want to track anything else, outside that list?", {
+    type: 'chips',
+    options: [{label: '+ Add another', value: 'add'}, {label: "I'm done", value: 'done'}],
+    onSubmit: (val) => { if (val === 'add') askCustomAreaName(); else askReturningGap(); }
+  });
+}
+function askCustomAreaName() {
+  askQuestion("What should we call it?", {
+    type: 'text', placeholder: 'e.g. Sleep, Creativity',
+    onSubmit: (val) => {
+      if (val && val.trim() && !allAreaKeys().includes(val.trim())) {
+        state.customAreas.push(val.trim());
+        askArea(allAreaKeys().length - 1);
+      } else {
+        askReturningGap();
+      }
+    }
+  });
+}
+function askReturningGap() {
+  askQuestion("Coming back after sitting a round or more out?", {
+    type: 'chips',
+    options: [{label: 'Yes', value: true}, {label: 'No', value: false}],
+    onSubmit: (val) => { state.returningAfterGap = val; askGapPicks(); }
+  });
+}
+function tenureNudge() {
+  if (state.returningAfterGap === true) {
+    return "You're coming back after time away — that resets the clock, regardless of how many rounds you've done before. Lean toward 1–2. Rebuild the streak before you rebuild the list.";
+  }
+  const n = parseInt(state.roundCount, 10);
+  if (isNaN(n)) return null;
+  if (n <= 1) return "You're new to this. Lean toward picking just 1 — maybe 2. Consistency beats a long list right now.";
+  if (n <= 3) return "A few rounds in. 1–2 is still a solid move — no need to max it out to prove something.";
+  return null;
+}
+function askGapPicks() {
+  const nudge = tenureNudge();
+  const proceed = () => {
+    const keys = allAreaKeys();
+    const flagged = keys.filter(k => state.fRatings[k] === 'inconsistent' || state.fRatings[k] === 'absent');
+    const list = flagged.length ? flagged : keys.filter(k => state.fRatings[k]);
+    askQuestion("Where's the gap between who you're trying to become and what you actually did? Pick 1 to 5.", {
+      type: 'multichips', selected: [], min: 1, max: 5,
+      options: list.map(k => ({label: k, value: k})),
+      onSubmit: (vals) => { state.gapPicks = vals; askNonNegotiables(); }
+    });
+  };
+  if (nudge) { pushGeorge(nudge, () => setTimeout(proceed, 450)); }
+  else { proceed(); }
+}
+function askNonNegotiables() {
+  askQuestion("Here's the standard non-negotiables — the stuff you never miss, no matter what. Edit anything, mark items in or out, or add your own.", {
+    type: 'nn-card',
+    onSubmit: () => { askPracticeForArea(0); }
+  });
+}
+function askPracticeForArea(idx) {
+  if (idx >= state.gapPicks.length) { askWhenTime(); return; }
+  const key = state.gapPicks[idx];
+  askQuestion(`Let's build the daily habit for **${key}**. Each one needs a little friction in it — not something you're already coasting on.`, {
+    type: 'practice-card', key,
+    onSubmit: () => { askPracticeForArea(idx + 1); }
+  });
+}
+function askWhenTime() {
+  askQuestion("What actual time does this happen?", {
+    type: 'time',
+    onSubmit: (val) => { state.time = val; askWhenAnchor(); }
+  });
+}
+function askWhenAnchor() {
+  askQuestion("Tied to what — something already fixed in your day?", {
+    type: 'text', placeholder: 'e.g. right after I pour my coffee',
+    onSubmit: (val) => { state.anchor = val; askBackupTime(); }
+  });
+}
+function askBackupTime() {
+  askQuestion("Your day will get knocked off track sometimes. Decide the backup now — what's the backup time?", {
+    type: 'time',
+    onSubmit: (val) => { state.backupTime = val; askBackupAnchor(); }
+  });
+}
+function askBackupAnchor() {
+  askQuestion("Tied to what?", {
+    type: 'text', placeholder: 'e.g. right before I go to bed',
+    onSubmit: (val) => { state.backupAnchor = val; askReset(); }
+  });
+}
+function askReset() {
+  askQuestion("Last one. Pick 4 consecutive weeks this quarter to go full-strength — no exceptions. Here's the default list, edit it to whatever full-strength means for you.", {
+    type: 'reset-card',
+    onSubmit: () => { askResetDate(); }
+  });
+}
+function askResetDate() {
+  askQuestion("When do those 4 weeks start?", {
+    type: 'date3',
+    onSubmit: (resetDate) => { state.resetDateStr = resetDate; showResult(); }
+  });
+}
+
+function showResult() {
+  const baselineKeys = allAreaKeys().filter(k => state.fRatings[k]);
+  const baselineDetails = baselineKeys.map(k => {
+    const rating = state.fRatings[k];
+    const note = state.fHowSo[k] ? ` — ${escapeHtml(state.fHowSo[k])}` : " — (nothing noted)";
+    return `<strong>${escapeHtml(k)}</strong> (${rating})${note}`;
+  }).join("<br>");
+  const gapDetails = state.gapPicks.map(k => {
+    const rating = state.fRatings[k];
+    const note = state.fHowSo[k] ? ` — ${escapeHtml(state.fHowSo[k])}` : "";
+    return `${escapeHtml(k)}: ${rating}${note}`;
+  }).join("<br>");
+  let resetRangeText = "—";
+  if (state.resetDateStr) {
+    const start = new Date(state.resetDateStr + "T00:00:00");
+    const end = addDays(state.resetDateStr, 27);
+    resetRangeText = `${formatDate(start)} → ${formatDate(end)}`;
+  }
+  const nnIn = state.nonNegotiables.filter(nn => nn.status === "in");
+  const nnOut = state.nonNegotiables.filter(nn => nn.status === "out");
+
+  const html = `
+    <div style="margin-bottom:8px; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--gold);">Your Daily Practice — Locked In</div>
+    <div style="font-family:'Schabo Condensed', sans-serif; font-size:19px; text-transform:uppercase; margin-bottom:10px;">Here's what you just committed to.</div>
+    <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">Save it, screenshot it, put it somewhere you'll actually see it.</div>
+    <div class="result-block"><div class="result-label">Look Back</div><div class="result-value" style="font-size:13px;">${baselineDetails}</div></div>
+    <div class="result-block"><div class="result-label">Non-Negotiables</div><div class="result-value" style="font-size:13px;">
+      ${nnIn.map(nn => `✓ ${escapeHtml(nn.text)}`).join("<br>")}
+      ${nnOut.length ? `<br><span style="color:var(--muted);">Out: ${nnOut.map(nn=>escapeHtml(nn.text)).join(', ')}</span>` : ''}
+    </div></div>
+    <div class="result-block"><div class="result-label">Course Correction</div><div class="result-value">${gapDetails}</div></div>
+    ${state.gapPicks.map(k => {
+      const p = state.practices[k] || { practice: "", doneDefinition: "", amount: "" };
+      return `<div class="result-block"><div class="result-label">Practice — ${escapeHtml(k)}</div><div class="result-value">${escapeHtml(p.practice)}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">Done when: ${escapeHtml(p.doneDefinition)} — ${escapeHtml(p.amount)}</div></div>`;
+    }).join("")}
+    <div class="result-block"><div class="result-label">When</div><div class="result-value">${state.time || "—"} · ${escapeHtml(state.anchor)}</div></div>
+    <div class="result-block"><div class="result-label">When It Breaks</div><div class="result-value">${state.backupTime || "—"} · ${escapeHtml(state.backupAnchor)}</div></div>
+    <div class="result-block"><div class="result-label">The Reset — 4 Weeks</div><div class="result-value">${resetRangeText}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">${state.resetItems.filter(r=>r.trim()).map(escapeHtml).join(' · ')}</div></div>
+  `;
+  pushGeorgeCard(`<div class="card" style="background:transparent; border:none; padding:0;">${html}</div>`, () => {
+    document.getElementById('inputArea').innerHTML = `
+      <div class="continue-row" style="justify-content:center;">
+        <button class="send ghost" onclick="restart()">Start Over</button>
+      </div>
+    `;
+  });
+}
+
+function restart() {
+  state.transcript = [];
+  state.customAreas = [];
+  state.fRatings = {};
+  state.fHowSo = {};
+  state.roundCount = "";
+  state.returningAfterGap = false;
+  state.gapPicks = [];
+  state.practices = {};
+  state.nonNegotiables = DEFAULT_NN.map(x => ({...x}));
+  state.resetItems = ["No alcohol", "No processed food", "No refined sugar"];
+  state.resetMonth = ""; state.resetDay = ""; state.resetYear = ""; state.resetDateStr = "";
+  state.time = ""; state.anchor = ""; state.backupTime = ""; state.backupAnchor = "";
+  state.pending = null;
+  renderTranscript();
+  clearInputArea();
+  startFlow();
+}
+
+startFlow();
+</script>
+</body>
+</html>

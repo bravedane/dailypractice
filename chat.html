@@ -357,9 +357,7 @@ const RATING_LABELS = {
 };
 function ratingLabelsFor(key) { return RATING_LABELS[key] || ["Absent","Inconsistent","Strong"]; }
 function areaFollowUpPrompt(key, rating, ratingLabel) {
-  if (rating === "strong") return `You said ${key} has been **${ratingLabel.toLowerCase()}**. What made that work?`;
-  if (rating === "inconsistent") return `You said ${key} has been **${ratingLabel.toLowerCase()}**. What made it hit and miss?`;
-  return `You said ${key} has been **${ratingLabel.toLowerCase()}**. What got in the way?`;
+  return `You said ${key} has been **${ratingLabel.toLowerCase()}**. Will you share a bit more about why that is? The more specific you are, the better this ends up serving you.`;
 }
 const DEFAULT_NN = [
   { text: "Sleep — 7+ hrs average per week, no phone in bed", status: "in" },

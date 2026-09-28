@@ -405,10 +405,10 @@ const state = {
   returningAfterGap: false,
   gapPicks: [],
   practices: {},
+  timing: {},
   nonNegotiables: DEFAULT_NN.map(x => ({...x})),
   resetItems: ["No alcohol", "No processed food", "No refined sugar"],
   resetMonth: "", resetDay: "", resetYear: "",
-  time: "", anchor: "", backupTime: "", backupAnchor: "",
   pending: null,
   qCount: 0,
   stepNum: 0,
@@ -900,38 +900,45 @@ function askNonNegotiables() {
   });
 }
 function askPracticeForArea(idx) {
-  if (idx >= state.gapPicks.length) { askWhenTime(); return; }
+  if (idx >= state.gapPicks.length) { askWhenTime(0); return; }
   const key = state.gapPicks[idx];
   askQuestion(`Let's build the daily habit for **${key}**. Each one needs a little friction in it — not something you're already coasting on.`, {
     type: 'practice-card', key,
     onSubmit: () => { askPracticeForArea(idx + 1); }
   });
 }
-function askWhenTime() {
-  askQuestion("What actual time does this happen?", {
+function askWhenTime(idx) {
+  if (idx >= state.gapPicks.length) {
+    if (state.isMember) askReset(); else showResult();
+    return;
+  }
+  const key = state.gapPicks[idx];
+  askQuestion(`What actual time does **${key}** happen?`, {
     type: 'time',
-    onSubmit: (val) => { state.time = val; askWhenAnchor(); }
+    onSubmit: (val) => { state.timing[key] = state.timing[key] || {}; state.timing[key].time = val; askWhenAnchor(idx); }
   });
 }
-function askWhenAnchor() {
-  askQuestion("Tied to what — something already fixed in your day?", {
+function askWhenAnchor(idx) {
+  const key = state.gapPicks[idx];
+  askQuestion(`Tied to what — something already fixed in your day — for **${key}**?`, {
     type: 'text', placeholder: 'e.g. right after I pour my coffee',
-    onSubmit: (val) => { state.anchor = val; askBackupTime(); }
+    onSubmit: (val) => { state.timing[key].anchor = val; askBackupTime(idx); }
   });
 }
-function askBackupTime() {
-  askQuestion("Your day will get knocked off track sometimes. Decide the backup now — what's the backup time?", {
+function askBackupTime(idx) {
+  const key = state.gapPicks[idx];
+  askQuestion(`Your day will get knocked off track sometimes. Decide the backup now — what's the backup time for **${key}**?`, {
     type: 'time',
-    onSubmit: (val) => { state.backupTime = val; askBackupAnchor(); }
+    onSubmit: (val) => { state.timing[key].backupTime = val; askBackupAnchor(idx); }
   });
 }
-function askBackupAnchor() {
-  askQuestion("Tied to what?", {
+function askBackupAnchor(idx) {
+  const key = state.gapPicks[idx];
+  askQuestion(`Tied to what — the backup for **${key}**?`, {
     type: 'text', placeholder: 'e.g. right before I go to bed',
     onSubmit: (val) => {
-      state.backupAnchor = val;
-      if (state.isMember) askReset();
-      else showResult();
+      state.timing[key].backupAnchor = val;
+      askWhenTime(idx + 1);
     }
   });
 }
@@ -983,8 +990,10 @@ function showResult() {
       const p = state.practices[k] || { practice: "", doneDefinition: "", amount: "" };
       return `<div class="result-block"><div class="result-label">Practice — ${escapeHtml(k)}</div><div class="result-value">${escapeHtml(p.practice)}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">Done when: ${escapeHtml(p.doneDefinition)} — ${escapeHtml(p.amount)}</div></div>`;
     }).join("")}
-    <div class="result-block"><div class="result-label">When</div><div class="result-value">${state.time || "—"} · ${escapeHtml(state.anchor)}</div></div>
-    <div class="result-block"><div class="result-label">When It Breaks</div><div class="result-value">${state.backupTime || "—"} · ${escapeHtml(state.backupAnchor)}</div></div>
+    ${state.gapPicks.map(k => {
+      const t = state.timing[k] || {};
+      return `<div class="result-block"><div class="result-label">When — ${escapeHtml(k)}</div><div class="result-value">${t.time || "—"} · ${escapeHtml(t.anchor||'')}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">Backup: ${t.backupTime || "—"} · ${escapeHtml(t.backupAnchor||'')}</div></div>`;
+    }).join('')}
     ${state.isMember ? `<div class="result-block"><div class="result-label">Act Like a FUTURE — 4 Weeks</div><div class="result-value">${resetRangeText}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">${state.resetItems.filter(r=>r.trim()).map(escapeHtml).join(' · ')}</div></div>` : ''}
   `;
   document.getElementById('printArea').innerHTML = `
@@ -1051,7 +1060,7 @@ function restart() {
   state.nonNegotiables = DEFAULT_NN.map(x => ({...x}));
   state.resetItems = ["No alcohol", "No processed food", "No refined sugar"];
   state.resetMonth = ""; state.resetDay = ""; state.resetYear = ""; state.resetDateStr = "";
-  state.time = ""; state.anchor = ""; state.backupTime = ""; state.backupAnchor = "";
+  state.timing = {};
   state.pending = null;
   state.stepNum = 0;
   renderTranscript();

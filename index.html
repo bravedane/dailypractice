@@ -544,7 +544,7 @@ function removeResetItem(idx) { state.resetItems.splice(idx, 1); render(); }
 function syncResetDate() { updateNavButton(); render(); }
 
 function canAdvance() {
-  if (step === 0) return state.email.trim().length > 3 && state.email.includes('@');
+  if (step === 0) return true; // round count is optional
   if (step === 1) {
     const keys = allAreaKeys();
     const key = keys[Math.min(state.fSubIndex, keys.length - 1)];
@@ -594,12 +594,10 @@ function setReturningGap(val) { state.returningAfterGap = val; render(); }
 function renderStep0() {
   return `
     <div class="step-label">Step 0 of 7 — Who's Declaring</div>
-    <h1>What's your email?</h1>
-    <p class="sub">Takes about 5 minutes, one question at a time. If you're an MWOD member, this pulls up your round history so the recommendation fits where you're at. Not a member? Any email works.</p>
+    <h1>How many rounds have you completed?</h1>
+    <p class="sub">Takes about 5 minutes, one question at a time. This just helps the recommendation fit where you're at — leave it blank if you're new or not sure.</p>
     <div class="content">
-      <label class="field-label">Email</label>
-      <input type="text" placeholder="you@example.com" value="${state.email}" oninput="state.email=this.value; updateNavButton();">
-      <label class="field-label" style="margin-top:14px;">Rounds completed (if known)</label>
+      <label class="field-label">Rounds completed</label>
       <input type="text" placeholder="e.g. 6 — leave blank if unsure or new" value="${state.roundCount}" oninput="state.roundCount=this.value; render();">
     </div>
   `;

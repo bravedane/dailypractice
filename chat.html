@@ -455,13 +455,14 @@ function computeStepTotal() {
   const gapCount = state.gapPicks.length || 2; // estimate before chosen
   const resetSteps = state.isMember ? 2 : 0; // reset list + reset date, members only
   return 1                    // round count
-       + areaCount * 2        // rating + follow-up per area
+       + areaCount            // one quick rating tap per area (no separate why)
        + 1                    // add-another-area prompt
        + 1                    // non-negotiables
        + (state.isMember ? 1 : 0) // returning-after-gap, members only
        + 1                    // gap picks
-       + gapCount              // one step per practice card
-       + gapCount * 4          // when time, when anchor, backup time, backup anchor — per habit
+       + gapCount              // why, asked only for picked areas
+       + gapCount              // one card per practice (was 1 already)
+       + gapCount              // one combined timing card per habit (was 4 steps)
        + resetSteps;
 }
 function updateProgressBar() {
@@ -628,6 +629,7 @@ function renderInputArea() {
 
   if (p.type === 'nn-card') { renderNNCard(); return; }
   if (p.type === 'practice-card') { renderPracticeCard(p.key); return; }
+  if (p.type === 'timing-card') { renderTimingCard(p.key); return; }
   if (p.type === 'reset-card') { renderResetCard(); return; }
   if (p.type === 'date3') { renderDate3(); return; }
 }
@@ -751,6 +753,35 @@ function renderPracticeCardBtn() {
   if (btn) btn.disabled = !(pr.practice.trim() && pr.doneDefinition.trim() && pr.amount.trim());
 }
 
+// --- Timing card (combines time/anchor/backup-time/backup-anchor into one screen) ---
+function renderTimingCard(key) {
+  if (!state.timing[key]) state.timing[key] = { time: "", anchor: "", backupTime: "", backupAnchor: "" };
+  const t = state.timing[key];
+  const el = document.getElementById('inputArea');
+  const ready = t.time && t.anchor.trim() && t.backupTime && t.backupAnchor.trim();
+  el.innerHTML = `
+    ${backButtonHtml()}
+    <div class="card">
+      <label class="field-label">What time does it happen?</label>
+      <input type="time" value="${t.time}" oninput="state.timing['${key}'].time=this.value; renderTimingCardBtn();">
+      <label class="field-label">Tied to what already-fixed part of your day?</label>
+      <input type="text" placeholder="e.g. right after I pour my coffee" value="${escapeHtml(t.anchor)}" oninput="state.timing['${key}'].anchor=this.value; renderTimingCardBtn();">
+      <label class="field-label">Backup time, if today goes sideways?</label>
+      <input type="time" value="${t.backupTime}" oninput="state.timing['${key}'].backupTime=this.value; renderTimingCardBtn();">
+      <label class="field-label">Backup tied to what?</label>
+      <input type="text" placeholder="e.g. right before I go to bed" value="${escapeHtml(t.backupAnchor)}" oninput="state.timing['${key}'].backupAnchor=this.value; renderTimingCardBtn();">
+    </div>
+    <div class="continue-row"><button class="send" id="timingBtn" ${ready?'':'disabled'} onclick="submitPending(true,'Timing set for ${key} ✓')">Continue</button></div>
+  `;
+}
+function renderTimingCardBtn() {
+  const p = state.pending;
+  if (!p || p.type !== 'timing-card') return;
+  const t = state.timing[p.key];
+  const btn = document.getElementById('timingBtn');
+  if (btn) btn.disabled = !(t.time && t.anchor.trim() && t.backupTime && t.backupAnchor.trim());
+}
+
 // --- Reset card ---
 function renderResetCard() {
   const el = document.getElementById('inputArea');
@@ -838,6 +869,10 @@ function askRoundCount() {
   });
 }
 
+function labelForRating(key, rating) {
+  const [lo, mid, hi] = ratingLabelsFor(key);
+  return rating === 'strong' ? hi : rating === 'inconsistent' ? mid : lo;
+}
 function askArea(idx) {
   const keys = allAreaKeys();
   if (idx >= keys.length) { askAddAnotherArea(); return; }
@@ -848,24 +883,7 @@ function askArea(idx) {
   askQuestion(`Let's talk about **${key}**${clarifierLine}. How's that actually been going for you lately?`, {
     type: 'chips',
     options: [{label: lo, value: 'absent'}, {label: mid, value: 'inconsistent'}, {label: hi, value: 'strong'}],
-    onSubmit: (val, label) => { state.fRatings[key] = val; askFollowUp(key, val, label, idx); }
-  });
-}
-const AREA_TRANSITIONS = ["Got it.", "Good to know.", "Makes sense.", "Noted.", "That's helpful."];
-const SKIP_TRANSITIONS = ["Okay, moving on.", "No problem, next.", "Alright, let's keep going."];
-function areaTransitionLine(hadContent) {
-  const pool = hadContent ? AREA_TRANSITIONS : SKIP_TRANSITIONS;
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-function askFollowUp(key, rating, ratingLabel, idx) {
-  askQuestion(areaFollowUpPrompt(key, rating, ratingLabel), {
-    type: 'text-optional', placeholder: 'One sentence is plenty',
-    onSubmit: (val) => {
-      const hadContent = val !== '(skipped)' && val.trim().length > 0;
-      state.fHowSo[key] = hadContent ? val : '';
-      state.stepNum++; // acknowledgment counts as a beat, keep progress bar honest
-      pushGeorge(areaTransitionLine(hadContent), () => setTimeout(() => askArea(idx + 1), 350));
-    }
+    onSubmit: (val, label) => { state.fRatings[key] = val; askArea(idx + 1); }
   });
 }
 function askAddAnotherArea() {
@@ -917,7 +935,7 @@ function askGapPicks() {
     askQuestion("Which of these do you want to build a specific daily habit around this time? Choose at least 1, up to 5 max — we'll build the actual practice for each one next.", {
       type: 'multichips', selected: [], min: 1, max: 5,
       options: list.map(k => ({label: k, value: k})),
-      onSubmit: (vals) => { state.gapPicks = vals; askPracticeForArea(0); }
+      onSubmit: (vals) => { state.gapPicks = vals; askWhyForArea(0); }
     });
   };
   if (nudge) { pushGeorge(nudge, () => setTimeout(proceed, 450)); }
@@ -929,47 +947,36 @@ function askNonNegotiables() {
     onSubmit: () => { if (state.isMember) askReturningGap(); else askGapPicks(); }
   });
 }
+function askWhyForArea(idx) {
+  const key = state.gapPicks[idx];
+  const rating = state.fRatings[key];
+  const ratingLabel = labelForRating(key, rating);
+  askQuestion(areaFollowUpPrompt(key, rating, ratingLabel), {
+    type: 'text-optional', placeholder: 'One sentence is plenty',
+    onSubmit: (val) => {
+      const hadContent = val !== '(skipped)' && val.trim().length > 0;
+      state.fHowSo[key] = hadContent ? val : '';
+      askPracticeForArea(idx);
+    }
+  });
+}
 function askPracticeForArea(idx) {
-  if (idx >= state.gapPicks.length) { askWhenTime(0); return; }
+  if (idx >= state.gapPicks.length) { askTimingForArea(0); return; }
   const key = state.gapPicks[idx];
   askQuestion(`Let's build the daily habit for **${key}**. Each one needs a little friction in it — not something you're already coasting on.`, {
     type: 'practice-card', key,
-    onSubmit: () => { askPracticeForArea(idx + 1); }
+    onSubmit: () => { askWhyForArea(idx + 1); }
   });
 }
-function askWhenTime(idx) {
+function askTimingForArea(idx) {
   if (idx >= state.gapPicks.length) {
     if (state.isMember) askReset(); else showResult();
     return;
   }
   const key = state.gapPicks[idx];
-  askQuestion(`What actual time does **${key}** happen?`, {
-    type: 'time',
-    onSubmit: (val) => { state.timing[key] = state.timing[key] || {}; state.timing[key].time = val; askWhenAnchor(idx); }
-  });
-}
-function askWhenAnchor(idx) {
-  const key = state.gapPicks[idx];
-  askQuestion(`What's already a fixed part of your day that **${key}** can happen right after or right before?`, {
-    type: 'text', placeholder: 'e.g. right after I pour my coffee',
-    onSubmit: (val) => { state.timing[key].anchor = val; askBackupTime(idx); }
-  });
-}
-function askBackupTime(idx) {
-  const key = state.gapPicks[idx];
-  askQuestion(`Your day will get knocked off track sometimes. Decide the backup now — what's the backup time for **${key}**?`, {
-    type: 'time',
-    onSubmit: (val) => { state.timing[key].backupTime = val; askBackupAnchor(idx); }
-  });
-}
-function askBackupAnchor(idx) {
-  const key = state.gapPicks[idx];
-  askQuestion(`Same question for the backup time — what's it anchored to?`, {
-    type: 'text', placeholder: 'e.g. right before I go to bed',
-    onSubmit: (val) => {
-      state.timing[key].backupAnchor = val;
-      askWhenTime(idx + 1);
-    }
+  askQuestion(`Now the timing for **${key}** — when it happens, and your backup plan if the day gets knocked off track.`, {
+    type: 'timing-card', key,
+    onSubmit: () => { askTimingForArea(idx + 1); }
   });
 }
 function askReset() {
@@ -1093,6 +1100,7 @@ function restart() {
   state.timing = {};
   state.pending = null;
   state.stepNum = 0;
+  state.history = [];
   renderTranscript();
   clearInputArea();
   startFlow();

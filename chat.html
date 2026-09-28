@@ -754,16 +754,19 @@ function askArea(idx) {
   });
 }
 const AREA_TRANSITIONS = ["Got it.", "Good to know.", "Makes sense.", "Noted.", "That's helpful."];
-function areaTransitionLine() {
-  return AREA_TRANSITIONS[Math.floor(Math.random() * AREA_TRANSITIONS.length)];
+const SKIP_TRANSITIONS = ["Okay, moving on.", "No problem, next.", "Alright, let's keep going."];
+function areaTransitionLine(hadContent) {
+  const pool = hadContent ? AREA_TRANSITIONS : SKIP_TRANSITIONS;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 function askFollowUp(key, rating, ratingLabel, idx) {
   askQuestion(areaFollowUpPrompt(key, rating, ratingLabel), {
     type: 'text-optional', placeholder: 'One sentence is plenty',
     onSubmit: (val) => {
-      state.fHowSo[key] = val === '(skipped)' ? '' : val;
+      const hadContent = val !== '(skipped)' && val.trim().length > 0;
+      state.fHowSo[key] = hadContent ? val : '';
       state.stepNum++; // acknowledgment counts as a beat, keep progress bar honest
-      pushGeorge(areaTransitionLine(), () => setTimeout(() => askArea(idx + 1), 350));
+      pushGeorge(areaTransitionLine(hadContent), () => setTimeout(() => askArea(idx + 1), 350));
     }
   });
 }

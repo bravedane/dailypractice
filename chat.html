@@ -264,6 +264,12 @@
     line-height: 1.5;
   }
   .result-block { margin-bottom: 10px; }
+  .result-block.highlight {
+    border: 1px solid var(--gold);
+    background: rgba(255, 214, 39, 0.08);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
   .result-label {
     font-size: 10.5px;
     text-transform: uppercase;
@@ -964,7 +970,7 @@ function showResult() {
     <div style="font-family:'Schabo Condensed', sans-serif; font-size:19px; text-transform:uppercase; margin-bottom:10px;">Here's what you just committed to.</div>
     <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">Save it, screenshot it, put it somewhere you'll actually see it.</div>
     <div class="result-block"><div class="result-label">Look Back</div><div class="result-value" style="font-size:13px;">${baselineDetails}</div></div>
-    <div class="result-block"><div class="result-label">Baseline Recommendation</div><div class="result-value" style="font-size:13px;">
+    <div class="result-block highlight"><div class="result-label">Baseline Recommendation</div><div class="result-value" style="font-size:13px;">
       ${nnIn.map(nn => `✓ ${escapeHtml(nn.text)}`).join("<br>")}
       ${nnOut.length ? `<br><span style="color:var(--muted);">Out: ${nnOut.map(nn=>escapeHtml(nn.text)).join(', ')}</span>` : ''}
     </div></div>

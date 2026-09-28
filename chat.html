@@ -55,6 +55,23 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+  .header-right {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .progress-track {
+    height: 3px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--gold);
+    transition: width 0.3s ease;
+    width: 0%;
+  }
   .scroll {
     flex: 1;
     overflow-y: auto;
@@ -258,7 +275,9 @@
     <img src="assets/mwod-logo-white.svg" alt="MWOD">
     <div class="divider"></div>
     <div class="tagline">Your Daily Practice</div>
+    <div class="header-right" id="progressLabel"></div>
   </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
   <div class="scroll" id="scroll"></div>
   <div class="input-area" id="inputArea"></div>
 </div>
@@ -307,8 +326,34 @@ const state = {
   resetMonth: "", resetDay: "", resetYear: "",
   time: "", anchor: "", backupTime: "", backupAnchor: "",
   pending: null,
-  qCount: 0
+  qCount: 0,
+  stepNum: 0
 };
+
+// Rough total question count for the progress bar. Recomputed as choices
+// (custom areas, gap picks) become known so it stays honest rather than
+// just decorative.
+function computeStepTotal() {
+  const areaCount = allAreaKeys().length;
+  const gapCount = state.gapPicks.length || 2; // estimate before chosen
+  return 1                    // round count
+       + areaCount * 2        // rating + follow-up per area
+       + 1                    // add-another-area prompt
+       + 1                    // returning-after-gap
+       + 1                    // gap picks
+       + 1                    // non-negotiables
+       + gapCount              // one step per practice card
+       + 4                     // when time, when anchor, backup time, backup anchor
+       + 2;                    // reset list, reset date
+}
+function updateProgressBar() {
+  const total = computeStepTotal();
+  const pct = Math.min(96, Math.round((state.stepNum / total) * 100));
+  const fill = document.getElementById('progressFill');
+  const label = document.getElementById('progressLabel');
+  if (fill) fill.style.width = pct + '%';
+  if (label) label.textContent = state.stepNum > 0 ? `~${Math.max(1, total - state.stepNum)} left` : '';
+}
 let uidCounter = 0;
 
 function allAreaKeys() { return [...CORE_AREAS, ...state.customAreas]; }
@@ -375,6 +420,8 @@ function clearInputArea() {
 
 function askQuestion(text, pending) {
   document.getElementById('inputArea').innerHTML = '';
+  state.stepNum++;
+  updateProgressBar();
   pushGeorge(text, () => {
     state.pending = pending;
     if (pending.type === 'multichips') pending.selected = pending.selected || [];
@@ -384,6 +431,8 @@ function askQuestion(text, pending) {
 
 function askCard(introText, cardHtmlFn, pending) {
   document.getElementById('inputArea').innerHTML = '';
+  state.stepNum++;
+  updateProgressBar();
   pushGeorge(introText, () => {
     state.pending = pending;
     renderInputArea();
@@ -593,7 +642,9 @@ function confirmDate3() {
 
 // ===== FLOW =====
 function startFlow() {
-  pushGeorge("Hey — let's build your practice for this round. I'll ask one thing at a time, should take about 5 minutes.", () => {
+  state.stepNum = 0;
+  updateProgressBar();
+  pushGeorge("Hey — let's build your practice for this round. About 5 minutes, one question at a time — you'll always see how much is left up top.", () => {
     setTimeout(askRoundCount, 500);
   });
 }
@@ -764,6 +815,10 @@ function showResult() {
     <div class="result-block"><div class="result-label">When It Breaks</div><div class="result-value">${state.backupTime || "—"} · ${escapeHtml(state.backupAnchor)}</div></div>
     <div class="result-block"><div class="result-label">The Reset — 4 Weeks</div><div class="result-value">${resetRangeText}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">${state.resetItems.filter(r=>r.trim()).map(escapeHtml).join(' · ')}</div></div>
   `;
+  const fill = document.getElementById('progressFill');
+  const label = document.getElementById('progressLabel');
+  if (fill) fill.style.width = '100%';
+  if (label) label.textContent = 'Done';
   pushGeorgeCard(`<div class="card" style="background:transparent; border:none; padding:0;">${html}</div>`, () => {
     document.getElementById('inputArea').innerHTML = `
       <div class="continue-row" style="justify-content:center;">
@@ -787,6 +842,7 @@ function restart() {
   state.resetMonth = ""; state.resetDay = ""; state.resetYear = ""; state.resetDateStr = "";
   state.time = ""; state.anchor = ""; state.backupTime = ""; state.backupAnchor = "";
   state.pending = null;
+  state.stepNum = 0;
   renderTranscript();
   clearInputArea();
   startFlow();

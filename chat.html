@@ -315,6 +315,7 @@ const state = {
   customAreas: [],
   fRatings: {},
   fHowSo: {},
+  isMember: null,
   roundCount: "",
   returningAfterGap: false,
   gapPicks: [],
@@ -643,12 +644,30 @@ function startFlow() {
   state.stepNum = 0;
   updateProgressBar();
   pushGeorge("Hey — let's build your daily practice. About 5 minutes, one question at a time — you'll always see how much is left up top.", () => {
-    setTimeout(askRoundCount, 500);
+    setTimeout(askIsMember, 500);
+  });
+}
+
+function askIsMember() {
+  askQuestion("Quick one first — are you an MWOD member?", {
+    type: 'chips',
+    options: [{label: "Yes, I'm a member", value: true}, {label: "No / not sure", value: false}],
+    onSubmit: (val) => {
+      state.isMember = val;
+      if (val) { askRoundCount(); }
+      else { explainMwodThenContinue(); }
+    }
+  });
+}
+
+function explainMwodThenContinue() {
+  pushGeorge("No worries — this works for anyone. MWOD (Men and Women of Discomfort) is a community built around daily practice and voluntary discomfort. Want to learn more or apply? **mwod.io** and **mwod.io/apply**.", () => {
+    setTimeout(() => askArea(0), 400);
   });
 }
 
 function askRoundCount() {
-  askQuestion("First — how many times have you done a focused stretch like this before? Totally fine to skip if this is your first time.", {
+  askQuestion("How many rounds have you completed? Totally fine to skip if you're not sure.", {
     type: 'text-optional', placeholder: 'e.g. 6',
     onSubmit: (val) => { state.roundCount = val === '(skipped)' ? '' : val; askArea(0); }
   });
@@ -675,7 +694,11 @@ function askAddAnotherArea() {
   askQuestion("Want to track anything else, outside that list?", {
     type: 'chips',
     options: [{label: '+ Add another', value: 'add'}, {label: "I'm done", value: 'done'}],
-    onSubmit: (val) => { if (val === 'add') askCustomAreaName(); else askReturningGap(); }
+    onSubmit: (val) => {
+      if (val === 'add') askCustomAreaName();
+      else if (state.isMember) askReturningGap();
+      else askGapPicks();
+    }
   });
 }
 function askCustomAreaName() {
@@ -685,8 +708,10 @@ function askCustomAreaName() {
       if (val && val.trim() && !allAreaKeys().includes(val.trim())) {
         state.customAreas.push(val.trim());
         askArea(allAreaKeys().length - 1);
-      } else {
+      } else if (state.isMember) {
         askReturningGap();
+      } else {
+        askGapPicks();
       }
     }
   });
@@ -831,6 +856,7 @@ function restart() {
   state.customAreas = [];
   state.fRatings = {};
   state.fHowSo = {};
+  state.isMember = null;
   state.roundCount = "";
   state.returningAfterGap = false;
   state.gapPicks = [];

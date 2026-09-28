@@ -422,6 +422,23 @@
     white-space: nowrap;
   }
   .doc-tracker td.check-cell { width: 20px; height: 20px; }
+  .doc-tracker-page {
+    break-before: page;
+    padding-top: 8px;
+  }
+  .doc-tracker-page:first-of-type { break-before: auto; }
+  .doc-month-line {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .doc-month-line .fill {
+    display: inline-block;
+    min-width: 140px;
+    border-bottom: 1px solid var(--ink);
+    margin-left: 6px;
+  }
   .doc-footer {
     margin-top: 24px;
     padding-top: 12px;
@@ -1197,14 +1214,26 @@ function showResult() {
     ...nnIn.map(nn => nn.text.split(' — ')[0]),
     ...state.gapPicks
   ];
-  const dayNums = Array.from({length: 28}, (_, i) => i + 1);
-  const trackerRows = trackerHabits.map(h => `
-    <tr>
-      <td class="habit-label">${escapeHtml(h)}</td>
-      ${dayNums.map(() => `<td class="check-cell"></td>`).join('')}
-    </tr>
-  `).join('');
+  const dayNums = Array.from({length: 31}, (_, i) => i + 1);
   const trackerHeader = dayNums.map(d => `<th>${d}</th>`).join('');
+  function buildTrackerRows() {
+    return trackerHabits.map(h => `
+      <tr>
+        <td class="habit-label">${escapeHtml(h)}</td>
+        ${dayNums.map(() => `<td class="check-cell"></td>`).join('')}
+      </tr>
+    `).join('');
+  }
+  const trackerPagesHtml = [1, 2, 3].map(pageNum => `
+    <div class="doc-section doc-tracker-page">
+      <div class="doc-section-title">31-Day Tracker — Month ${pageNum} — Check Off Each Day, By Hand</div>
+      <div class="doc-month-line">Month:<span class="fill"></span>Year:<span class="fill"></span></div>
+      <table class="doc-tracker">
+        <thead><tr><th class="week-label">Habit</th>${trackerHeader}</tr></thead>
+        <tbody>${buildTrackerRows()}</tbody>
+      </table>
+    </div>
+  `).join('');
 
   const nnPrintList = state.nonNegotiables.map(nn =>
     `<li>${nn.status === 'in' ? '☑' : '☐'} ${escapeHtml(nn.text)}</li>`
@@ -1271,13 +1300,7 @@ function showResult() {
     </div>
     ` : ''}
 
-    <div class="doc-section">
-      <div class="doc-section-title">28-Day Tracker — Check Off Each Day, By Hand</div>
-      <table class="doc-tracker">
-        <thead><tr><th class="week-label">Habit</th>${trackerHeader}</tr></thead>
-        <tbody>${trackerRows}</tbody>
-      </table>
-    </div>
+    ${trackerPagesHtml}
 
     <div class="doc-footer">UP UNTIL NOW, FROM NOW ON.</div>
   `;

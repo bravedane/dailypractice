@@ -1153,7 +1153,7 @@ function showResult() {
   const baselineKeys = allAreaKeys().filter(k => state.fRatings[k]);
   const baselineDetails = baselineKeys.map(k => {
     const rating = state.fRatings[k];
-    const note = state.fHowSo[k] ? ` — ${escapeHtml(state.fHowSo[k])}` : " — (nothing noted)";
+    const note = state.fHowSo[k] ? ` — ${escapeHtml(state.fHowSo[k])}` : "";
     return `<strong>${escapeHtml(k)}</strong> (${rating})${note}`;
   }).join("<br>");
   const gapDetails = state.gapPicks.map(k => {

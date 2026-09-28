@@ -333,14 +333,104 @@
     margin-top: 8px;
   }
   @media print {
-    body { background: #fff !important; background-image: none !important; color: #111 !important; }
-    .header, .progress-track, .scroll .row, .input-area, .no-print { display: none !important; }
-    .app { height: auto !important; }
+    @page { margin: 0.5in; }
+    body { background: #fdfaf3 !important; background-image: none !important; color: #1a1a1a !important; }
+    .header, .progress-track, .scroll, .input-area, .no-print { display: none !important; }
+    .app { height: auto !important; max-width: none !important; }
     #printArea { display: block !important; }
-    #printArea .result-block { break-inside: avoid; margin-bottom: 12px; }
-    #printArea .result-label { color: #a8860c !important; }
   }
   #printArea { display: none; }
+  #printArea {
+    --ink: #1a1a1a;
+    --ink-muted: #6b5f4a;
+    --paper: #fdfaf3;
+    --line: #d8cdb3;
+    --accent: #a8860c;
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px double var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 22px;
+  }
+  .doc-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .doc-title {
+    font-family: 'Schabo Condensed', sans-serif;
+    font-size: 34px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0;
+  }
+  .doc-sub {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-top: 6px;
+  }
+  .doc-section {
+    margin-bottom: 20px;
+    break-inside: avoid;
+  }
+  .doc-section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+  }
+  .doc-habit-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px dotted var(--line);
+    font-size: 13.5px;
+    gap: 12px;
+  }
+  .doc-habit-row:last-child { border-bottom: none; }
+  .doc-habit-name { font-weight: 600; flex-shrink: 0; }
+  .doc-habit-detail { color: var(--ink-muted); font-size: 12.5px; text-align: right; }
+  .doc-nn-list { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 24px; }
+  .doc-nn-list li { font-size: 13px; padding: 4px 0; break-inside: avoid; }
+  .doc-tracker {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 9.5px;
+    margin-top: 6px;
+  }
+  .doc-tracker th, .doc-tracker td {
+    border: 1px solid var(--line);
+    text-align: center;
+    padding: 3px 1px;
+  }
+  .doc-tracker th.week-label, .doc-tracker td.habit-label {
+    text-align: left;
+    padding-left: 6px;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .doc-tracker td.check-cell { width: 20px; height: 20px; }
+  .doc-footer {
+    margin-top: 24px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--ink-muted);
+    letter-spacing: 0.05em;
+  }
 </style>
 </head>
 <body>
@@ -369,9 +459,9 @@ const RATING_LABELS = {
   "Faith": ["Dormant","Inconsistent","Grounded"],
   "Work": ["Behind","Treading Water","On Top Of It"],
   "Frenemies": ["Overexposed","Managing","Protected"],
-  "Money": ["Avoiding It","Inconsistent","In Control"],
-  "Projects": ["Stalled","Moving","On Track"],
-  "Relationships": ["Neglected","Inconsistent","Invested"],
+  "Money": ["Avoiding It","Inconsistent","Disciplined"],
+  "Projects": ["Stalled","Inconsistent","Shipping Consistently"],
+  "Relationships": ["Disconnected","Misaligned","Known and Loved"],
   "Phone": ["Out Of Control","Some Control","Disciplined"]
 };
 function ratingLabelsFor(key) { return RATING_LABELS[key] || ["Absent","Inconsistent","Strong"]; }
@@ -383,6 +473,10 @@ const AREA_CLARIFIERS = {
   "Projects": "personal projects, not your job — Work covers that"
 };
 function areaClarifier(key) { return AREA_CLARIFIERS[key] || null; }
+const AREA_QUESTION_OVERRIDES = {
+  "Phone": "Let's talk about your **Phone Use**"
+};
+function areaQuestionIntro(key) { return AREA_QUESTION_OVERRIDES[key] || `Let's talk about **${key}**`; }
 function areaFollowUpPrompt(key, rating, ratingLabel) {
   return `You said ${key} has been **${ratingLabel.toLowerCase()}**. Will you share a bit more about why that is? The more specific you are, the better this ends up serving you.`;
 }
@@ -757,11 +851,16 @@ function renderPracticeCardBtn() {
 function renderTimingCard(key) {
   if (!state.timing[key]) state.timing[key] = { time: "", anchor: "", backupTime: "", backupAnchor: "" };
   const t = state.timing[key];
+  const p = state.practices[key] || {};
   const el = document.getElementById('inputArea');
   const ready = t.time && t.anchor.trim() && t.backupTime && t.backupAnchor.trim();
   el.innerHTML = `
     ${backButtonHtml()}
     <div class="card">
+      <div style="background:#141414; border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:14px;">
+        <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--gold); margin-bottom:4px;">Committing a time for</div>
+        <div style="font-size:14px; font-weight:600;">${escapeHtml(key)}${p.practice ? ': ' + escapeHtml(p.practice) : ''}</div>
+      </div>
       <label class="field-label">What time does it happen?</label>
       <input type="time" value="${t.time}" oninput="state.timing['${key}'].time=this.value; renderTimingCardBtn();">
       <label class="field-label">Tied to what already-fixed part of your day?</label>
@@ -858,14 +957,14 @@ function askIsMember() {
 
 function explainMwodThenContinue() {
   pushGeorge("No worries — this works for anyone. MWOD (Men and Women of Discomfort) is a community built around daily practice and voluntary discomfort. You can learn more at [mwod.io](https://mwod.io) or apply to join at [mwod.io/apply](https://mwod.io/apply).", () => {
-    setTimeout(() => askArea(0), 400);
+    setTimeout(askNonNegotiables, 400);
   });
 }
 
 function askRoundCount() {
   askQuestion("How many rounds have you completed? Totally fine to skip if you're not sure.", {
     type: 'text-optional', placeholder: 'e.g. 6',
-    onSubmit: (val) => { state.roundCount = val === '(skipped)' ? '' : val; askArea(0); }
+    onSubmit: (val) => { state.roundCount = val === '(skipped)' ? '' : val; askNonNegotiables(); }
   });
 }
 
@@ -880,7 +979,7 @@ function askArea(idx) {
   const [lo, mid, hi] = ratingLabelsFor(key);
   const clarifier = areaClarifier(key);
   const clarifierLine = clarifier ? ` (${clarifier})` : '';
-  askQuestion(`Let's talk about **${key}**${clarifierLine}. How's that actually been going for you lately?`, {
+  askQuestion(`${areaQuestionIntro(key)}${clarifierLine}. How's that actually been going for you lately?`, {
     type: 'chips',
     options: [{label: lo, value: 'absent'}, {label: mid, value: 'inconsistent'}, {label: hi, value: 'strong'}],
     onSubmit: (val, label) => { state.fRatings[key] = val; askArea(idx + 1); }
@@ -892,7 +991,8 @@ function askAddAnotherArea() {
     options: [{label: '+ Add another', value: 'add'}, {label: "I'm done", value: 'done'}],
     onSubmit: (val) => {
       if (val === 'add') askCustomAreaName();
-      else askNonNegotiables();
+      else if (state.isMember) askReturningGap();
+      else askGapPicks();
     }
   });
 }
@@ -903,8 +1003,10 @@ function askCustomAreaName() {
       if (val && val.trim() && !allAreaKeys().includes(val.trim())) {
         state.customAreas.push(val.trim());
         askArea(allAreaKeys().length - 1);
+      } else if (state.isMember) {
+        askReturningGap();
       } else {
-        askNonNegotiables();
+        askGapPicks();
       }
     }
   });
@@ -942,9 +1044,9 @@ function askGapPicks() {
   else { proceed(); }
 }
 function askNonNegotiables() {
-  askQuestion("Before we get into specific habits, here's a separate recommendation: a baseline we suggest regardless of what you build below. It's not a mandate — edit anything, turn items off, or add your own.", {
+  askQuestion("We recommend these 5 Baseline Habits be part of everyone's practice, every round. It's not a mandate — edit anything, turn items off, or add your own. Once you've got these locked, we'll look at where you actually stand across the rest of your life.", {
     type: 'nn-card',
-    onSubmit: () => { if (state.isMember) askReturningGap(); else askGapPicks(); }
+    onSubmit: () => { askArea(0); }
   });
 }
 function askWhyForArea(idx) {
@@ -1016,27 +1118,105 @@ function showResult() {
   const html = `
     <div style="margin-bottom:8px; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--gold);">Your Daily Practice — Locked In</div>
     <div style="font-family:'Schabo Condensed', sans-serif; font-size:19px; text-transform:uppercase; margin-bottom:10px;">Here's what you just committed to.</div>
-    <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">Save it, screenshot it, put it somewhere you'll actually see it.</div>
-    <div class="result-block"><div class="result-label">Look Back</div><div class="result-value" style="font-size:13px;">${baselineDetails}</div></div>
+    <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">Your full declaration is ready — tap Save as PDF below for a printable version with a trackable chart.</div>
     <div class="result-block highlight"><div class="result-label">Baseline Recommendation</div><div class="result-value" style="font-size:13px;">
       ${nnIn.map(nn => `✓ ${escapeHtml(nn.text)}`).join("<br>")}
       ${nnOut.length ? `<br><span style="color:var(--muted);">Out: ${nnOut.map(nn=>escapeHtml(nn.text)).join(', ')}</span>` : ''}
     </div></div>
+    <div class="result-block"><div class="result-label">Look Back</div><div class="result-value" style="font-size:13px;">${baselineDetails}</div></div>
     <div class="result-block"><div class="result-label">Course Correction</div><div class="result-value">${gapDetails}</div></div>
     ${state.gapPicks.map(k => {
       const p = state.practices[k] || { practice: "", doneDefinition: "", amount: "" };
-      return `<div class="result-block"><div class="result-label">Practice — ${escapeHtml(k)}</div><div class="result-value">${escapeHtml(p.practice)}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">Done when: ${escapeHtml(p.doneDefinition)} — ${escapeHtml(p.amount)}</div></div>`;
-    }).join("")}
-    ${state.gapPicks.map(k => {
       const t = state.timing[k] || {};
-      return `<div class="result-block"><div class="result-label">When — ${escapeHtml(k)}</div><div class="result-value">${t.time || "—"} · ${escapeHtml(t.anchor||'')}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">Backup: ${t.backupTime || "—"} · ${escapeHtml(t.backupAnchor||'')}</div></div>`;
-    }).join('')}
+      return `<div class="result-block"><div class="result-label">Practice — ${escapeHtml(k)}</div><div class="result-value">${escapeHtml(p.practice)}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">Done when: ${escapeHtml(p.doneDefinition)} — ${escapeHtml(p.amount)}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">When: ${t.time || "—"} · ${escapeHtml(t.anchor||'')} — Backup: ${t.backupTime || "—"} · ${escapeHtml(t.backupAnchor||'')}</div></div>`;
+    }).join("")}
     ${state.isMember ? `<div class="result-block"><div class="result-label">Act Like a FUTURE — 4 Weeks</div><div class="result-value">${resetRangeText}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">${state.resetItems.filter(r=>r.trim()).map(escapeHtml).join(' · ')}</div></div>` : ''}
   `;
+
+  // --- Print / PDF version: a wall-worthy one-page declaration + an
+  // analog-style 28-day tracker grid (habits down the side, days across,
+  // hand-checked box per day). Built separately from the chat-bubble html
+  // above — different audience (paper, not screen), different design needs.
+  const trackerHabits = [
+    ...nnIn.map(nn => nn.text.split(' — ')[0]),
+    ...state.gapPicks
+  ];
+  const dayNums = Array.from({length: 28}, (_, i) => i + 1);
+  const trackerRows = trackerHabits.map(h => `
+    <tr>
+      <td class="habit-label">${escapeHtml(h)}</td>
+      ${dayNums.map(() => `<td class="check-cell"></td>`).join('')}
+    </tr>
+  `).join('');
+  const trackerHeader = dayNums.map(d => `<th>${d}</th>`).join('');
+
+  const nnPrintList = state.nonNegotiables.map(nn =>
+    `<li>${nn.status === 'in' ? '☑' : '☐'} ${escapeHtml(nn.text)}</li>`
+  ).join('');
+
+  const practicePrintRows = state.gapPicks.map(k => {
+    const p = state.practices[k] || {};
+    const t = state.timing[k] || {};
+    return `
+      <div class="doc-habit-row">
+        <div>
+          <div class="doc-habit-name">${escapeHtml(k)}</div>
+          <div style="font-size:12px; color:var(--ink-muted); margin-top:2px;">${escapeHtml(p.practice||'')}</div>
+          <div style="font-size:11px; color:var(--ink-muted); margin-top:2px;">Done when: ${escapeHtml(p.doneDefinition||'')} — ${escapeHtml(p.amount||'')}</div>
+        </div>
+        <div class="doc-habit-detail">
+          ${t.time || '—'}<br>${escapeHtml(t.anchor||'')}
+          <div style="margin-top:4px; font-size:11px;">Backup: ${t.backupTime||'—'} · ${escapeHtml(t.backupAnchor||'')}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const lookBackPrintRows = baselineKeys.map(k => {
+    const rating = state.fRatings[k];
+    const label = labelForRating(k, rating);
+    const note = state.fHowSo[k] ? escapeHtml(state.fHowSo[k]) : '';
+    return `<div class="doc-habit-row"><div class="doc-habit-name">${escapeHtml(k)}</div><div class="doc-habit-detail">${escapeHtml(label)}${note ? ' — ' + note : ''}</div></div>`;
+  }).join('');
+
   document.getElementById('printArea').innerHTML = `
-    <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#a8860c; margin-bottom:6px;">Your Daily Practice</div>
-    <h1 style="font-family:'Schabo Condensed', sans-serif; text-transform:uppercase; font-size:26px; margin:0 0 16px 0;">Your Declaration</h1>
-    ${html.replace(/color:var\(--gold\)/g, 'color:#a8860c').replace(/color: var\(--muted\)/g, 'color:#555')}
+    <div class="doc-header">
+      <div class="doc-eyebrow">MWOD · Men and Women of Discomfort</div>
+      <h1 class="doc-title">Your Daily Practice</h1>
+      <div class="doc-sub">A declaration, made ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+    </div>
+
+    <div class="doc-section">
+      <div class="doc-section-title">Baseline Recommendation</div>
+      <ul class="doc-nn-list">${nnPrintList}</ul>
+    </div>
+
+    <div class="doc-section">
+      <div class="doc-section-title">Look Back</div>
+      ${lookBackPrintRows}
+    </div>
+
+    <div class="doc-section">
+      <div class="doc-section-title">Your Practices — What, When, Backup</div>
+      ${practicePrintRows}
+    </div>
+
+    ${state.isMember ? `
+    <div class="doc-section">
+      <div class="doc-section-title">Act Like a FUTURE — 4 Weeks</div>
+      <div class="doc-habit-row"><div class="doc-habit-name">${resetRangeText}</div><div class="doc-habit-detail">${state.resetItems.filter(r=>r.trim()).map(escapeHtml).join(' · ')}</div></div>
+    </div>
+    ` : ''}
+
+    <div class="doc-section">
+      <div class="doc-section-title">28-Day Tracker — Check Off Each Day, By Hand</div>
+      <table class="doc-tracker">
+        <thead><tr><th class="week-label">Habit</th>${trackerHeader}</tr></thead>
+        <tbody>${trackerRows}</tbody>
+      </table>
+    </div>
+
+    <div class="doc-footer">UP UNTIL NOW, FROM NOW ON.</div>
   `;
 
   const fill = document.getElementById('progressFill');

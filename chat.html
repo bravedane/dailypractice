@@ -55,6 +55,8 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+  .bubble a { color: var(--gold); text-decoration: underline; }
+  .row.user .bubble a { color: #171717; }
   .header-right {
     margin-left: auto;
     font-size: 11px;
@@ -273,7 +275,7 @@
     <img src="assets/mwod-logo-white.svg" alt="MWOD">
     <div class="divider"></div>
     <div class="tagline">Your Daily Practice</div>
-    <div class="header-right" id="progressLabel"></div>
+    <div class="header-right" id="progressLabel">Progress</div>
   </div>
   <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
   <div class="scroll" id="scroll"></div>
@@ -349,9 +351,7 @@ function updateProgressBar() {
   const total = computeStepTotal();
   const pct = Math.min(96, Math.round((state.stepNum / total) * 100));
   const fill = document.getElementById('progressFill');
-  const label = document.getElementById('progressLabel');
   if (fill) fill.style.width = pct + '%';
-  if (label) label.textContent = state.stepNum > 0 ? `~${Math.max(1, total - state.stepNum)} left` : '';
 }
 let uidCounter = 0;
 
@@ -360,7 +360,10 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function formatGeorgeText(text) {
-  return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<span class="hl">$1</span>');
+  let out = escapeHtml(text);
+  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  out = out.replace(/\*\*(.+?)\*\*/g, '<span class="hl">$1</span>');
+  return out;
 }
 
 function scrollBottom() {
@@ -643,7 +646,7 @@ function confirmDate3() {
 function startFlow() {
   state.stepNum = 0;
   updateProgressBar();
-  pushGeorge("Hey — let's build your daily practice. About 5 minutes, one question at a time — you'll always see how much is left up top.", () => {
+  pushGeorge("Hey — let's build your daily practice. It takes about 5 minutes, and I'll ask one question at a time. You can track your progress in the bar at the top.", () => {
     setTimeout(askIsMember, 500);
   });
 }
@@ -661,7 +664,7 @@ function askIsMember() {
 }
 
 function explainMwodThenContinue() {
-  pushGeorge("No worries — this works for anyone. MWOD (Men and Women of Discomfort) is a community built around daily practice and voluntary discomfort. Want to learn more or apply? **mwod.io** and **mwod.io/apply**.", () => {
+  pushGeorge("No worries — this works for anyone. MWOD (Men and Women of Discomfort) is a community built around daily practice and voluntary discomfort. You can learn more at [mwod.io](https://mwod.io) or apply to join at [mwod.io/apply](https://mwod.io/apply).", () => {
     setTimeout(() => askArea(0), 400);
   });
 }
@@ -839,9 +842,7 @@ function showResult() {
     <div class="result-block"><div class="result-label">The Reset — 4 Weeks</div><div class="result-value">${resetRangeText}</div><div class="result-value" style="margin-top:4px; font-size:12px; color:var(--muted);">${state.resetItems.filter(r=>r.trim()).map(escapeHtml).join(' · ')}</div></div>
   `;
   const fill = document.getElementById('progressFill');
-  const label = document.getElementById('progressLabel');
   if (fill) fill.style.width = '100%';
-  if (label) label.textContent = 'Done';
   pushGeorgeCard(`<div class="card" style="background:transparent; border:none; padding:0;">${html}</div>`, () => {
     document.getElementById('inputArea').innerHTML = `
       <div class="continue-row" style="justify-content:center;">

@@ -341,10 +341,12 @@
 </div>
 
 <script>
-const CORE_AREAS = ["Fitness","Food","Family","Friends","Faith","Work","Frenemies","Money","Projects","Relationships","Phone"];
+const CORE_AREAS = ["Fitness","Food","Sleep","Hydration","Family","Friends","Faith","Work","Frenemies","Money","Projects","Relationships","Phone"];
 const RATING_LABELS = {
   "Fitness": ["Absent","Inconsistent","Strong"],
   "Food": ["Careless","Inconsistent","Clean"],
+  "Sleep": ["Wrecked","Inconsistent","Rested"],
+  "Hydration": ["Neglected","Inconsistent","Dialed In"],
   "Family": ["Distant","Inconsistent","Present"],
   "Friends": ["Isolated","Inconsistent","Connected"],
   "Faith": ["Dormant","Inconsistent","Grounded"],
@@ -789,7 +791,7 @@ function askAddAnotherArea() {
 }
 function askCustomAreaName() {
   askQuestion("What should we call it?", {
-    type: 'text', placeholder: 'e.g. Sleep, Creativity',
+    type: 'text', placeholder: 'e.g. Creativity, Rest, Screen Time',
     onSubmit: (val) => {
       if (val && val.trim() && !allAreaKeys().includes(val.trim())) {
         state.customAreas.push(val.trim());

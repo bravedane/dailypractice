@@ -746,10 +746,18 @@ function askArea(idx) {
     onSubmit: (val, label) => { state.fRatings[key] = val; askFollowUp(key, val, label, idx); }
   });
 }
+const AREA_TRANSITIONS = ["Got it.", "Good to know.", "Makes sense.", "Noted.", "That's helpful."];
+function areaTransitionLine() {
+  return AREA_TRANSITIONS[Math.floor(Math.random() * AREA_TRANSITIONS.length)];
+}
 function askFollowUp(key, rating, ratingLabel, idx) {
   askQuestion(areaFollowUpPrompt(key, rating, ratingLabel), {
     type: 'text-optional', placeholder: 'One sentence is plenty',
-    onSubmit: (val) => { state.fHowSo[key] = val === '(skipped)' ? '' : val; askArea(idx + 1); }
+    onSubmit: (val) => {
+      state.fHowSo[key] = val === '(skipped)' ? '' : val;
+      state.stepNum++; // acknowledgment counts as a beat, keep progress bar honest
+      pushGeorge(areaTransitionLine(), () => setTimeout(() => askArea(idx + 1), 350));
+    }
   });
 }
 function askAddAnotherArea() {

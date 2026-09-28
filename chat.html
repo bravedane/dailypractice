@@ -705,7 +705,7 @@ function confirmDate3() {
 function startFlow() {
   state.stepNum = 0;
   updateProgressBar();
-  pushGeorge("Hey — let's build your daily practice. It takes about 5 minutes, and I'll ask one question at a time. You can track your progress in the bar at the top.", () => {
+  pushGeorge("Hey — let's build your daily practice. It takes about 5 minutes, and I'll ask one question at a time. You can track your progress in the bar at the top. At the end, you'll get a clear one-page declaration you can save as a PDF and keep.", () => {
     setTimeout(askIsMember, 500);
   });
 }

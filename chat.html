@@ -356,6 +356,13 @@ const RATING_LABELS = {
   "Phone": ["Out Of Control","Some Control","Disciplined"]
 };
 function ratingLabelsFor(key) { return RATING_LABELS[key] || ["Absent","Inconsistent","Strong"]; }
+const AREA_CLARIFIERS = {
+  "Family": "however you define it — parents, spouse, kids, siblings, whoever counts",
+  "Relationships": "romantic partner, if that's separate from Family for you",
+  "Frenemies": "people who complicate more than they add",
+  "Projects": "personal projects, not your job — Work covers that"
+};
+function areaClarifier(key) { return AREA_CLARIFIERS[key] || null; }
 function areaFollowUpPrompt(key, rating, ratingLabel) {
   return `You said ${key} has been **${ratingLabel.toLowerCase()}**. Will you share a bit more about why that is? The more specific you are, the better this ends up serving you.`;
 }
@@ -738,7 +745,9 @@ function askArea(idx) {
   if (idx >= keys.length) { askAddAnotherArea(); return; }
   const key = keys[idx];
   const [lo, mid, hi] = ratingLabelsFor(key);
-  askQuestion(`Let's talk about **${key}**. How's that actually been going for you lately?`, {
+  const clarifier = areaClarifier(key);
+  const clarifierLine = clarifier ? ` (${clarifier})` : '';
+  askQuestion(`Let's talk about **${key}**${clarifierLine}. How's that actually been going for you lately?`, {
     type: 'chips',
     options: [{label: lo, value: 'absent'}, {label: mid, value: 'inconsistent'}, {label: hi, value: 'strong'}],
     onSubmit: (val, label) => { state.fRatings[key] = val; askFollowUp(key, val, label, idx); }

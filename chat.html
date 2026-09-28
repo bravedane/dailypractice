@@ -298,10 +298,10 @@ const RATING_LABELS = {
   "Phone": ["Out Of Control","Some Control","Disciplined"]
 };
 function ratingLabelsFor(key) { return RATING_LABELS[key] || ["Absent","Inconsistent","Strong"]; }
-function areaFollowUpPrompt(rating) {
-  if (rating === "strong") return "What made that work?";
-  if (rating === "inconsistent") return "What made it hit and miss?";
-  return "What got in the way?";
+function areaFollowUpPrompt(key, rating, ratingLabel) {
+  if (rating === "strong") return `You said ${key} has been **${ratingLabel.toLowerCase()}**. What made that work?`;
+  if (rating === "inconsistent") return `You said ${key} has been **${ratingLabel.toLowerCase()}**. What made it hit and miss?`;
+  return `You said ${key} has been **${ratingLabel.toLowerCase()}**. What got in the way?`;
 }
 const DEFAULT_NN = [
   { text: "Sleep — 7+ hrs average per week, no phone in bed", status: "in" },
@@ -442,11 +442,12 @@ function askCard(introText, cardHtmlFn, pending) {
 }
 
 function submitPending(value, displayLabel) {
-  pushUser(displayLabel !== undefined ? displayLabel : String(value));
+  const label = displayLabel !== undefined ? displayLabel : String(value);
+  pushUser(label);
   const p = state.pending;
   state.pending = null;
   clearInputArea();
-  p.onSubmit(value);
+  p.onSubmit(value, label);
 }
 
 function renderInputArea() {
@@ -684,11 +685,11 @@ function askArea(idx) {
   askQuestion(`Let's talk about **${key}**. How's that actually been going for you lately?`, {
     type: 'chips',
     options: [{label: lo, value: 'absent'}, {label: mid, value: 'inconsistent'}, {label: hi, value: 'strong'}],
-    onSubmit: (val) => { state.fRatings[key] = val; askFollowUp(key, val, idx); }
+    onSubmit: (val, label) => { state.fRatings[key] = val; askFollowUp(key, val, label, idx); }
   });
 }
-function askFollowUp(key, rating, idx) {
-  askQuestion(areaFollowUpPrompt(rating), {
+function askFollowUp(key, rating, ratingLabel, idx) {
+  askQuestion(areaFollowUpPrompt(key, rating, ratingLabel), {
     type: 'text-optional', placeholder: 'One sentence is plenty',
     onSubmit: (val) => { state.fHowSo[key] = val === '(skipped)' ? '' : val; askArea(idx + 1); }
   });

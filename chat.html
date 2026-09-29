@@ -80,9 +80,16 @@
     padding: 20px 16px 12px;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
     gap: 12px;
   }
+  /* Push short conversations to the bottom with a margin on the first
+     bubble rather than justify-content:flex-end on the scroll container.
+     flex-end + overflow-y:auto is a known browser bug: once content is
+     taller than the viewport, the overflowing top portion becomes
+     unreachable by scrolling. margin-top:auto gets the same "stick to
+     bottom when short" look without breaking scroll once content grows
+     (e.g. the long results screen). */
+  .scroll > *:first-child { margin-top: auto; }
   .row { display: flex; }
   .row.george { justify-content: flex-start; }
   .row.user { justify-content: flex-end; }
@@ -190,8 +197,9 @@
     color: #171717;
     border: none;
     border-radius: 22px;
-    padding: 0 20px;
-    font-size: 13px;
+    padding: 13px 22px;
+    min-height: 46px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
@@ -208,6 +216,9 @@
     justify-content: flex-end;
     margin-top: 10px;
   }
+  /* Continue is the primary action on every card screen — make it a full
+     width, easy-to-reach target instead of a small pill in the corner. */
+  .continue-row .send { width: 100%; }
   .back-link {
     background: none;
     border: none;
@@ -1126,6 +1137,7 @@ function askNonNegotiables() {
   });
 }
 function askWhyForArea(idx) {
+  if (idx >= state.gapPicks.length) { askTimingForArea(0); return; }
   const key = state.gapPicks[idx];
   const rating = state.fRatings[key];
   const ratingLabel = labelForRating(key, rating);
@@ -1172,10 +1184,14 @@ function askResetDate() {
 
 function showResult() {
   const baselineKeys = allAreaKeys().filter(k => state.fRatings[k]);
+  // Look Back is the quick, across-the-board snapshot rating for every area —
+  // it deliberately does NOT repeat the "why" note, because that note only
+  // exists for areas that were also chosen as Course Correction picks, and
+  // showing it in both places produced identical duplicated text for any
+  // overlapping area. The deep-dive note belongs to Course Correction only.
   const baselineDetails = baselineKeys.map(k => {
     const rating = state.fRatings[k];
-    const note = state.fHowSo[k] ? ` — ${escapeHtml(state.fHowSo[k])}` : "";
-    return `<strong>${escapeHtml(k)}</strong> (${rating})${note}`;
+    return `<strong>${escapeHtml(k)}</strong> (${rating})`;
   }).join("<br>");
   const gapDetails = state.gapPicks.map(k => {
     const rating = state.fRatings[k];

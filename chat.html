@@ -519,8 +519,6 @@ const DEFAULT_NN = [
   { text: "Movement — 1+ hr workout, 6 days a week", status: "in" },
   { text: "Check-ins — check in with your community 6 days a week", status: "in" }
 ];
-const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-
 const state = {
   transcript: [],
   customAreas: [],
@@ -537,7 +535,6 @@ const state = {
   removalWhy: {},
   nonNegotiables: DEFAULT_NN.map(x => ({...x})),
   resetItems: ["No alcohol", "No processed food", "No refined sugar"],
-  resetMonth: "", resetDay: "", resetYear: "",
   pending: null,
   qCount: 0,
   stepNum: 0,
@@ -577,21 +574,29 @@ function goBack() {
 }
 
 // Rough total question count for the progress bar. Recomputed as choices
-// (custom areas, gap picks) become known so it stays honest rather than
-// just decorative.
+// (custom areas, ratings, gap picks) become known so it stays honest rather
+// than just decorative.
 function computeStepTotal() {
   const areaCount = allAreaKeys().length;
+  // "Why" now fires inline per flagged area (absent/inconsistent), right
+  // after that area's rating — not per gapPick like before the reorder.
+  // Count actual flags where known; otherwise estimate half the areas rated
+  // so far will flag, which keeps the bar roughly honest before ratings
+  // are in without needing to guess every area's outcome up front.
+  const ratedKeys = allAreaKeys().filter(k => state.fRatings[k]);
+  const flaggedSoFar = ratedKeys.filter(k => state.fRatings[k] !== 'strong').length;
+  const whyEstimate = ratedKeys.length ? Math.round(flaggedSoFar / ratedKeys.length * areaCount) : Math.round(areaCount / 2);
   const gapCount = state.gapPicks.length || 2; // estimate before chosen
   const resetSteps = state.isMember ? 2 : 0; // reset list + reset date, members only
   return 1                    // round count
-       + areaCount            // one quick rating tap per area (no separate why)
+       + areaCount            // one quick rating tap per area
+       + whyEstimate          // why, inline for flagged areas
        + 1                    // add-another-area prompt
        + 1                    // non-negotiables
        + (state.isMember ? 1 : 0) // returning-after-gap, members only
        + 1                    // gap picks
-       + gapCount              // why, asked only for picked areas
-       + gapCount              // one card per practice (was 1 already)
-       + gapCount              // one combined timing card per habit (was 4 steps)
+       + gapCount              // one card per practice
+       + gapCount              // one combined timing card per habit
        + resetSteps;
 }
 function updateProgressBar() {
@@ -760,7 +765,28 @@ function renderInputArea() {
   if (p.type === 'practice-card') { renderPracticeCard(p.key); return; }
   if (p.type === 'timing-card') { renderTimingCard(p.key); return; }
   if (p.type === 'reset-card') { renderResetCard(); return; }
-  if (p.type === 'date3') { renderDate3(); return; }
+  if (p.type === 'week-picker') { renderWeekPicker(p); return; }
+}
+function handleWeekOptionClick(btn) {
+  const p = state.pending;
+  const idx = Number(btn.getAttribute('data-idx'));
+  const o = p.options[idx];
+  submitPending(o.value, o.label);
+}
+// Week-of-round picker: replaces raw Month/Day/Year dropdowns with real
+// round weeks (Week 1-12, plus Week 0) so a member picks "Week 5" and sees
+// its actual dates, instead of hand-assembling a date with no round
+// context. Rendered as a vertical list (not chips) because the labels
+// carry real date ranges that need to stay readable, not squeezed into
+// pill shapes.
+function renderWeekPicker(p) {
+  const el = document.getElementById('inputArea');
+  el.innerHTML = `
+    ${backButtonHtml()}
+    <div class="card" style="display:flex; flex-direction:column; gap:8px;">
+      ${p.options.map((o, idx) => `<button class="chip" data-idx="${idx}" style="text-align:left; width:100%;" onclick="handleWeekOptionClick(this)">${escapeHtml(o.label)}</button>`).join('')}
+    </div>
+  `;
 }
 
 function handleChipClick(btn) {
@@ -941,33 +967,54 @@ function renderResetBtn() {
   if (btn) btn.disabled = !state.resetItems.some(r => r.trim());
 }
 
-// --- Date3 (reset start date) ---
-function renderDate3() {
-  const el = document.getElementById('inputArea');
-  const monthOpts = MONTH_NAMES.map((m,i) => `<option value="${i+1}" ${Number(state.resetMonth)===i+1?'selected':''}>${m}</option>`).join('');
-  const dayOpts = Array.from({length:31},(_,i)=>i+1).map(d => `<option value="${d}" ${Number(state.resetDay)===d?'selected':''}>${d}</option>`).join('');
-  const yearOpts = [26,27,28].map(y => `<option value="20${y}" ${Number(state.resetYear)===2000+y?'selected':''}>'${y}</option>`).join('');
-  const ready = state.resetMonth && state.resetDay && state.resetYear;
-  el.innerHTML = `
-    ${backButtonHtml()}
-    <div class="card">
-      <div style="display:flex; gap:8px;">
-        <select class="date-sel" style="flex:2;" onchange="state.resetMonth=this.value; renderDate3();"><option value="">Month</option>${monthOpts}</select>
-        <select class="date-sel" style="flex:1;" onchange="state.resetDay=this.value; renderDate3();"><option value="">Day</option>${dayOpts}</select>
-        <select class="date-sel" style="flex:1;" onchange="state.resetYear=this.value; renderDate3();"><option value="">Year</option>${yearOpts}</select>
-      </div>
-    </div>
-    <div class="continue-row"><button class="send" ${ready?'':'disabled'} onclick="confirmDate3()">Send</button></div>
-  `;
+// --- MWOD round math ---
+// Every round begins on the first Monday of the first month of its quarter
+// (Jan, Apr, Jul, Oct) — same rule every quarter, no exceptions for the
+// cart-open or course-start date. 12 weeks, then a 13th week called
+// "Week 0". The Final Anchor Challenge is the final Saturday of Week 12,
+// i.e. 5 days after the Week 12 Monday.
+function pad2(n) { return String(n).padStart(2, '0'); }
+function formatISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function firstMondayOfMonth(year, monthIndex) {
+  const d = new Date(year, monthIndex, 1);
+  const dow = d.getDay(); // 0=Sun .. 6=Sat
+  const offset = (8 - dow) % 7; // dow=1 (Mon) -> 0
+  d.setDate(d.getDate() + offset);
+  return d;
+}
+function roundStartForQuarter(year, quarterIndex) { return firstMondayOfMonth(year, quarterIndex * 3); }
+// Finds the round (start date) whose 13-week span contains refDate, or the
+// nearest upcoming round if refDate falls in a gap between rounds.
+function getCurrentRoundStart(refDate) {
+  const candidates = [];
+  for (let y = refDate.getFullYear() - 1; y <= refDate.getFullYear() + 1; y++) {
+    for (let q = 0; q < 4; q++) candidates.push(roundStartForQuarter(y, q));
+  }
+  candidates.sort((a, b) => a - b);
+  for (const c of candidates) {
+    const end = new Date(c); end.setDate(end.getDate() + 90); // 13 weeks - 1 day
+    if (refDate >= c && refDate <= end) return c;
+  }
+  return candidates.find(c => c > refDate) || candidates[candidates.length - 1];
+}
+// Builds the pickable week options for the round containing refDate: Weeks
+// 1-12 plus Week 0, each labeled with its real date range, filtered to only
+// weeks that haven't fully ended yet (this is a forward commitment).
+function buildRoundWeekOptions(refDate) {
+  const roundStart = getCurrentRoundStart(refDate);
+  const weekNumbers = [...Array.from({length: 12}, (_, i) => i + 1), 0];
+  return weekNumbers.map(n => {
+    const offsetWeeks = n === 0 ? 12 : n - 1;
+    const start = new Date(roundStart); start.setDate(start.getDate() + offsetWeeks * 7);
+    const end = new Date(start); end.setDate(end.getDate() + 6);
+    return { n, start, end };
+  }).filter(w => w.end >= refDate).map(w => {
+    const label = `Week ${w.n} (${w.start.toLocaleDateString('en-US',{month:'short',day:'numeric'})}\u2013${w.end.toLocaleDateString('en-US',{month:'short',day:'numeric'})})`;
+    return { label, value: formatISODate(w.start) };
+  });
 }
 function addDays(dateStr, days) { const d = new Date(dateStr+"T00:00:00"); d.setDate(d.getDate()+days); return d; }
 function formatDate(d) { return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }); }
-function confirmDate3() {
-  const resetDate = `${state.resetYear}-${String(state.resetMonth).padStart(2,'0')}-${String(state.resetDay).padStart(2,'0')}`;
-  const start = new Date(resetDate+"T00:00:00");
-  const label = formatDate(start);
-  submitPending(resetDate, label);
-}
 
 // ===== FLOW =====
 function startFlow() {
@@ -1017,7 +1064,29 @@ function askArea(idx) {
   askQuestion(`${areaQuestionIntro(key)}${clarifierLine}. How's that actually been going for you lately?`, {
     type: 'chips',
     options: [{label: lo, value: 'absent'}, {label: mid, value: 'inconsistent'}, {label: hi, value: 'strong'}],
-    onSubmit: (val, label) => { state.fRatings[key] = val; askArea(idx + 1); }
+    onSubmit: (val, label) => {
+      state.fRatings[key] = val;
+      // Reflect before commit: if the area's rated as a problem spot, ask
+      // why right here — not later, after they've already agreed to build
+      // a specific habit around it. The later gapPicks step ("which of
+      // these do you want to build a daily habit around") is the real
+      // commitment moment, and it should be an informed choice, not the
+      // first time they've said anything about why an area is where it is.
+      if (val === 'absent' || val === 'inconsistent') { askAreaWhy(idx, key); }
+      else { askArea(idx + 1); }
+    }
+  });
+}
+function askAreaWhy(idx, key) {
+  const rating = state.fRatings[key];
+  const ratingLabel = labelForRating(key, rating);
+  askQuestion(areaFollowUpPrompt(key, rating, ratingLabel), {
+    type: 'text-optional', placeholder: 'One sentence is plenty',
+    onSubmit: (val) => {
+      const hadContent = val !== '(skipped)' && val.trim().length > 0;
+      state.fHowSo[key] = hadContent ? val : '';
+      askArea(idx + 1);
+    }
   });
 }
 function askAddAnotherArea() {
@@ -1124,7 +1193,7 @@ function askGapPicks() {
     askQuestion("Which of these do you want to build a specific daily habit around this time? Choose at least 1, up to 5 max — we'll build the actual practice for each one next.", {
       type: 'multichips', selected: [], min: 1, max: 5,
       options: list.map(k => ({label: k, value: k})),
-      onSubmit: (vals) => { state.gapPicks = vals; askWhyForArea(0); }
+      onSubmit: (vals) => { state.gapPicks = vals; askPracticeForArea(0); }
     });
   };
   if (nudge) { pushGeorge(nudge, () => setTimeout(proceed, 450)); }
@@ -1136,26 +1205,17 @@ function askNonNegotiables() {
     onSubmit: () => { askArea(0); }
   });
 }
-function askWhyForArea(idx) {
-  if (idx >= state.gapPicks.length) { askTimingForArea(0); return; }
-  const key = state.gapPicks[idx];
-  const rating = state.fRatings[key];
-  const ratingLabel = labelForRating(key, rating);
-  askQuestion(areaFollowUpPrompt(key, rating, ratingLabel), {
-    type: 'text-optional', placeholder: 'One sentence is plenty',
-    onSubmit: (val) => {
-      const hadContent = val !== '(skipped)' && val.trim().length > 0;
-      state.fHowSo[key] = hadContent ? val : '';
-      askPracticeForArea(idx);
-    }
-  });
-}
+// Note: the "why" question used to live here, asked only for the areas
+// picked in askGapPicks — i.e. after the commitment was already made.
+// It's now asked inline in askArea/askAreaWhy, right after each area gets
+// flagged as absent/inconsistent, so reflection happens before the pick,
+// not after. See askAreaWhy above.
 function askPracticeForArea(idx) {
   if (idx >= state.gapPicks.length) { askTimingForArea(0); return; }
   const key = state.gapPicks[idx];
   askQuestion(`Let's build the daily habit for **${key}**. Each one needs a little friction in it — not something you're already coasting on.`, {
     type: 'practice-card', key,
-    onSubmit: () => { askWhyForArea(idx + 1); }
+    onSubmit: () => { askPracticeForArea(idx + 1); }
   });
 }
 function askTimingForArea(idx) {
@@ -1176,8 +1236,10 @@ function askReset() {
   });
 }
 function askResetDate() {
-  askQuestion("When do those 4 weeks start?", {
-    type: 'date3',
+  const options = buildRoundWeekOptions(new Date());
+  askQuestion("Which week of your round do those 4 weeks start on?", {
+    type: 'week-picker',
+    options,
     onSubmit: (resetDate) => { state.resetDateStr = resetDate; showResult(); }
   });
 }
@@ -1277,11 +1339,16 @@ function showResult() {
     `;
   }).join('');
 
+  // Same rule as the on-screen Look Back: this is the quick snapshot rating,
+  // not the deep-dive note (which lives in the Practice section for picked
+  // areas). Showing the note here too was the second copy of the Bug #1
+  // duplicate-content report — the on-screen version got fixed first, this
+  // print version had the identical issue and would have shown up in the
+  // PDF even after that fix.
   const lookBackPrintRows = baselineKeys.map(k => {
     const rating = state.fRatings[k];
     const label = labelForRating(k, rating);
-    const note = state.fHowSo[k] ? escapeHtml(state.fHowSo[k]) : '';
-    return `<div class="doc-habit-row"><div class="doc-habit-name">${escapeHtml(k)}</div><div class="doc-habit-detail">${escapeHtml(label)}${note ? ' — ' + note : ''}</div></div>`;
+    return `<div class="doc-habit-row"><div class="doc-habit-name">${escapeHtml(k)}</div><div class="doc-habit-detail">${escapeHtml(label)}</div></div>`;
   }).join('');
 
   document.getElementById('printArea').innerHTML = `
@@ -1382,7 +1449,7 @@ function restart() {
   state.practices = {};
   state.nonNegotiables = DEFAULT_NN.map(x => ({...x}));
   state.resetItems = ["No alcohol", "No processed food", "No refined sugar"];
-  state.resetMonth = ""; state.resetDay = ""; state.resetYear = ""; state.resetDateStr = "";
+  state.resetDateStr = "";
   state.timing = {};
   state.customRemovals = [];
   state.removalPicks = [];

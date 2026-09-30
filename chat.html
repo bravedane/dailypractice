@@ -529,11 +529,28 @@ function areaQuestionIntro(key) { return AREA_QUESTION_OVERRIDES[key] || `Let's 
 // A first-timer gets a soft, exploratory prompt; someone on round 8+ gets
 // asked to name the pattern, not just describe the symptom — they've
 // already done the surface-level version of this question many times over.
+//
+// Bug found 2026-09-29: this fires once per flagged area, so a veteran with
+// several flagged areas saw the identical opening line ("You've done this
+// before—") repeated verbatim area after area, which reads like a script
+// looping rather than a real conversation. It also collided almost
+// word-for-word with askTriedBefore's separate veteran-only question later
+// in the flow ("You've been through this before—"). Fixed by rotating
+// through several openers (tracked per-session via state.veteranPromptCount)
+// and by giving askTriedBefore its own distinct wording below.
+const VETERAN_OPENERS = [
+  (key) => `You've done this before — what's actually different about ${key} this time, or is it the same pattern you've seen before? Name the pattern if you can.`,
+  (key) => `Same ${key} question, different round — what's changed, if anything?`,
+  (key) => `You know the drill by now on ${key} — what's really going on this time?`,
+  (key) => `Let's skip the surface answer on ${key} — what's the actual pattern underneath it?`
+];
 function areaFollowUpPrompt(key, rating, ratingLabel) {
   const tier = tenureTier();
   const label = ratingLabel.toLowerCase();
   if (tier === 'veteran') {
-    return `You've done this before — what's actually different about ${key} this time, or is it the same pattern you've seen before? Name the pattern if you can.`;
+    const opener = VETERAN_OPENERS[state.veteranPromptCount % VETERAN_OPENERS.length];
+    state.veteranPromptCount++;
+    return opener(key);
   }
   if (tier === 'new') {
     return `You said ${key} has been **${label}**. No pressure to have it all figured out — just take a guess at why that might be.`;
@@ -563,6 +580,7 @@ const state = {
   removalWhy: {},
   dismissedFlags: {},
   triedBefore: {},
+  veteranPromptCount: 0,
   nonNegotiables: DEFAULT_NN.map(x => ({...x})),
   resetItems: ["No alcohol", "No processed food", "No refined sugar"],
   resetDateStr: "",
@@ -584,7 +602,7 @@ const state = {
 // practice+timing pair per gap pick — get real idx-level checkpoints so
 // refreshing partway through those doesn't send someone back to question 1.
 const SAVE_KEY = 'mwodDailyPracticeDraft.v1';
-const PERSISTED_KEYS = ['customAreas','fRatings','fHowSo','isMember','roundCount','returningAfterGap','gapPicks','practices','timing','customRemovals','removalPicks','removalWhy','dismissedFlags','triedBefore','nonNegotiables','resetItems','resetDateStr','resumePoint'];
+const PERSISTED_KEYS = ['customAreas','fRatings','fHowSo','isMember','roundCount','returningAfterGap','gapPicks','practices','timing','customRemovals','removalPicks','removalWhy','dismissedFlags','triedBefore','veteranPromptCount','nonNegotiables','resetItems','resetDateStr','resumePoint'];
 function autosave() {
   try {
     const data = {};
@@ -1533,7 +1551,7 @@ function askPracticeForArea(idx) {
   });
 }
 function askTriedBefore(idx, key) {
-  askQuestion(`You've been through this before — what have you already tried for **${key}** that didn't stick?`, {
+  askQuestion(`One more for **${key}**: what have you already tried before that didn't stick?`, {
     type: 'text-optional', placeholder: 'One sentence is plenty, or skip if nothing comes to mind',
     onSubmit: (val) => {
       state.triedBefore[key] = (val && val !== '(skipped)') ? val : '(nothing noted)';
@@ -1788,6 +1806,7 @@ function restart() {
   state.removalWhy = {};
   state.dismissedFlags = {};
   state.triedBefore = {};
+  state.veteranPromptCount = 0;
   state.resumePoint = null;
   state.pending = null;
   state.stepNum = 0;

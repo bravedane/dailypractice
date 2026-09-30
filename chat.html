@@ -434,24 +434,29 @@
     font-size: 9.5px;
     margin-top: 6px;
   }
+  .doc-tracker {
+    font-size: 7px;
+  }
   .doc-tracker th, .doc-tracker td {
     border: 1px solid var(--line);
     text-align: center;
-    padding: 3px 1px;
+    padding: 1px 0;
   }
   .doc-tracker th.week-label, .doc-tracker td.habit-label {
     text-align: left;
-    padding-left: 6px;
-    font-size: 10.5px;
+    padding-left: 4px;
+    font-size: 8px;
     font-weight: 600;
     white-space: nowrap;
   }
-  .doc-tracker td.check-cell { width: 20px; height: 20px; }
-  .doc-tracker-page {
-    break-before: page;
-    padding-top: 8px;
-  }
-  .doc-tracker-page:first-of-type { break-before: auto; }
+  .doc-tracker td.check-cell { width: 12px; height: 12px; }
+  /* Trackers now live together on a single page (see .doc-tracker-wrap) so
+     only the wrap itself forces a new page — individual month blocks stack
+     within it instead of each claiming its own page. break-inside:avoid
+     keeps a month's header + table together if it lands near a page edge. */
+  .doc-tracker-wrap { break-before: page; padding-top: 4px; }
+  .doc-tracker-month { break-inside: avoid; margin-bottom: 10px; }
+  .doc-tracker-month:last-child { margin-bottom: 0; }
   .doc-month-line {
     display: flex;
     gap: 24px;
@@ -536,11 +541,11 @@ function areaFollowUpPrompt(key, rating, ratingLabel) {
   return `You said ${key} has been **${label}**. Will you share a bit more about why that is? The more specific you are, the better this ends up serving you.`;
 }
 const DEFAULT_NN = [
-  { text: "Sleep — 7+ hrs average per week, no phone in bed", status: "in" },
+  { text: "Sleep — 7+ hrs average per week", status: "in" },
   { text: "Hydration — 90+ oz of water every day", status: "in" },
-  { text: "Nutrition — eat clean: meat, vegetables, nuts, seeds, some fruit; avoid processed food and added sugar", status: "in" },
+  { text: "Nutrition — eat clean", status: "in" },
   { text: "Movement — 1+ hr workout, 6 days a week", status: "in" },
-  { text: "Check-ins — check in with your community 6 days a week", status: "in" }
+  { text: "Check-ins — check in with your community daily", status: "in" }
 ];
 const state = {
   transcript: [],
@@ -1569,11 +1574,11 @@ function showResult() {
     <div style="margin-bottom:8px; font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--gold);">Your Daily Practice — Locked In</div>
     <div style="font-family:'Schabo Condensed', sans-serif; font-size:19px; text-transform:uppercase; margin-bottom:10px;">Here's what you just committed to.</div>
     <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">Your full declaration is ready — tap Save as PDF below for a printable version with a trackable chart.</div>
-    <div class="result-block highlight"><div class="result-label">Baseline Recommendation</div><div class="result-value" style="font-size:13px;">
+    <div class="result-block highlight"><div class="result-label">Baseline Habits</div><div class="result-value" style="font-size:13px;">
       ${nnIn.map(nn => `✓ ${escapeHtml(nn.text)}`).join("<br>")}
       ${nnOut.length ? `<br><span style="color:var(--muted);">Out: ${nnOut.map(nn=>escapeHtml(nn.text)).join(', ')}</span>` : ''}
     </div></div>
-    <div class="result-block"><div class="result-label">Look Back</div><div class="result-value" style="font-size:13px;">${baselineDetails}</div></div>
+    <div class="result-block"><div class="result-label">Current Reality</div><div class="result-value" style="font-size:13px;">${baselineDetails}</div></div>
     <div class="result-block"><div class="result-label">Course Correction</div><div class="result-value">${gapDetails}</div></div>
     ${state.gapPicks.map(k => {
       const p = state.practices[k] || { practice: "", doneDefinition: "", amount: "" };
@@ -1602,16 +1607,25 @@ function showResult() {
       </tr>
     `).join('');
   }
-  const trackerPagesHtml = [1, 2, 3].map(pageNum => `
-    <div class="doc-section doc-tracker-page">
-      <div class="doc-section-title">31-Day Tracker — Month ${pageNum} — Check Off Each Day, By Hand</div>
-      <div class="doc-month-line">Month:<span class="fill"></span>Year:<span class="fill"></span></div>
-      <table class="doc-tracker">
-        <thead><tr><th class="week-label">Habit</th>${trackerHeader}</tr></thead>
-        <tbody>${buildTrackerRows()}</tbody>
-      </table>
+  // All three months live on one page now (Dane's call — spread across 3
+  // pages was more paper than the tracker needed). Each month gets a
+  // smaller table so all three fit without overflowing; break-inside:avoid
+  // on .doc-tracker-month keeps a given month from splitting mid-table if
+  // it lands near the page edge.
+  const trackerPagesHtml = `
+    <div class="doc-tracker-wrap">
+      ${[1, 2, 3].map(pageNum => `
+        <div class="doc-tracker-month">
+          <div class="doc-section-title">Month ${pageNum} — Check Off Each Day, By Hand</div>
+          <div class="doc-month-line">Month:<span class="fill"></span>Year:<span class="fill"></span></div>
+          <table class="doc-tracker">
+            <thead><tr><th class="week-label">Habit</th>${trackerHeader}</tr></thead>
+            <tbody>${buildTrackerRows()}</tbody>
+          </table>
+        </div>
+      `).join('')}
     </div>
-  `).join('');
+  `;
 
   const nnPrintList = state.nonNegotiables.map(nn =>
     `<li>${nn.status === 'in' ? '☑' : '☐'} ${escapeHtml(nn.text)}</li>`
@@ -1647,25 +1661,23 @@ function showResult() {
     return `<div class="doc-habit-row"><div class="doc-habit-name">${escapeHtml(k)}</div><div class="doc-habit-detail">${escapeHtml(label)}</div></div>`;
   }).join('');
 
+  // Header (title/date), footer tagline, and any page-number chrome are
+  // deliberately omitted per Dane's direction — they read as distracting
+  // metadata on a document meant to feel like a clean, wall-worthy
+  // declaration, not a printed report.
   document.getElementById('printArea').innerHTML = `
-    <div class="doc-header">
-      <div class="doc-eyebrow">MWOD · Men and Women of Discomfort</div>
-      <h1 class="doc-title">Your Daily Practice</h1>
-      <div class="doc-sub">A declaration, made ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-    </div>
-
     <div class="doc-section">
-      <div class="doc-section-title">Baseline Recommendation</div>
+      <div class="doc-section-title">Baseline Habits</div>
       <ul class="doc-nn-list">${nnPrintList}</ul>
     </div>
 
     <div class="doc-section">
-      <div class="doc-section-title">Look Back</div>
+      <div class="doc-section-title">Current Reality</div>
       ${lookBackPrintRows}
     </div>
 
     <div class="doc-section">
-      <div class="doc-section-title">Your Practices — What, When, Backup</div>
+      <div class="doc-section-title">Custom Habits</div>
       ${practicePrintRows}
     </div>
 
@@ -1684,8 +1696,6 @@ function showResult() {
     ` : ''}
 
     ${trackerPagesHtml}
-
-    <div class="doc-footer">UP UNTIL NOW, FROM NOW ON.</div>
   `;
 
   const fill = document.getElementById('progressFill');

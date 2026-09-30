@@ -524,41 +524,22 @@ const AREA_QUESTION_OVERRIDES = {
   "Phone": "Let's talk about your **Phone Use**"
 };
 function areaQuestionIntro(key) { return AREA_QUESTION_OVERRIDES[key] || `Let's talk about **${key}**`; }
-// Tiered by tenureTier() (new / early / mid / veteran) so the depth of the
-// question matches how many times someone's already done this reflection.
-// A first-timer gets a soft, exploratory prompt; a veteran gets asked to
-// name the pattern, not just describe the symptom.
-//
-// Correction, 2026-09-29 (Dane): the first pass at veteran phrasing led
-// every variant with "you've done this before" / "same question, different
-// round" / "you know the drill" — explicitly announcing the tiering logic
-// instead of just asking a better question. That's backwards: a real coach
-// who's worked with someone for 8 rounds doesn't narrate the fact that
-// they've talked before, they just ask something sharper, because the
-// sharpness is what shows familiarity. Naming the repetition out loud reads
-// as an AI proving to itself that personalization fired, not something
-// that serves the person answering. Rewritten below to drop all
-// meta-commentary about tenure/rounds and just be the more direct
-// question. Rotation is kept (still fires once per flagged area) so
-// multiple areas in one session don't get verbatim-identical phrasing, but
-// none of the variants reference the user's history anymore.
-const VETERAN_OPENERS = [
-  (key) => `What's actually different about ${key} this time — or is it the same pattern again?`,
-  (key) => `What's changed with ${key} since it last looked like this?`,
-  (key) => `What's really going on with ${key} — not the surface reason, the actual one?`,
-  (key) => `What's the pattern underneath ${key}, if you had to name it?`
-];
+// Correction, 2026-09-29 (Dane): the tiered "harder question for veterans"
+// idea (#5) went through two rewrites and both were wrong for the same
+// underlying reason, not just bad phrasing. Every version — whether it
+// announced "you've done this before" or just implied it via "not the
+// surface reason, the actual one" — presumed a veteran's honest answer
+// would be shallow unless the tool pushed past it. That's patronizing
+// regardless of wording, and it's not how MWOD talks to people: the model
+// is honest self-assessment, not an AI deciding someone needs prodding
+// into depth. Removed the tiered variants entirely — one prompt, same for
+// everyone, no presumption either way. The one legitimately different
+// thing a veteran actually has — real history with specific things
+// they've tried before — is asked plainly and factually in
+// askTriedBefore() later in the flow ("what have you already tried that
+// didn't stick"), which was never part of this correction.
 function areaFollowUpPrompt(key, rating, ratingLabel) {
-  const tier = tenureTier();
   const label = ratingLabel.toLowerCase();
-  if (tier === 'veteran') {
-    const opener = VETERAN_OPENERS[state.veteranPromptCount % VETERAN_OPENERS.length];
-    state.veteranPromptCount++;
-    return opener(key);
-  }
-  if (tier === 'new') {
-    return `You said ${key} has been **${label}**. No pressure to have it all figured out — just take a guess at why that might be.`;
-  }
   return `You said ${key} has been **${label}**. Will you share a bit more about why that is? The more specific you are, the better this ends up serving you.`;
 }
 const DEFAULT_NN = [
@@ -584,7 +565,6 @@ const state = {
   removalWhy: {},
   dismissedFlags: {},
   triedBefore: {},
-  veteranPromptCount: 0,
   nonNegotiables: DEFAULT_NN.map(x => ({...x})),
   resetItems: ["No alcohol", "No processed food", "No refined sugar"],
   resetDateStr: "",
@@ -606,7 +586,7 @@ const state = {
 // practice+timing pair per gap pick — get real idx-level checkpoints so
 // refreshing partway through those doesn't send someone back to question 1.
 const SAVE_KEY = 'mwodDailyPracticeDraft.v1';
-const PERSISTED_KEYS = ['customAreas','fRatings','fHowSo','isMember','roundCount','returningAfterGap','gapPicks','practices','timing','customRemovals','removalPicks','removalWhy','dismissedFlags','triedBefore','veteranPromptCount','nonNegotiables','resetItems','resetDateStr','resumePoint'];
+const PERSISTED_KEYS = ['customAreas','fRatings','fHowSo','isMember','roundCount','returningAfterGap','gapPicks','practices','timing','customRemovals','removalPicks','removalWhy','dismissedFlags','triedBefore','nonNegotiables','resetItems','resetDateStr','resumePoint'];
 function autosave() {
   try {
     const data = {};
@@ -1810,7 +1790,6 @@ function restart() {
   state.removalWhy = {};
   state.dismissedFlags = {};
   state.triedBefore = {};
-  state.veteranPromptCount = 0;
   state.resumePoint = null;
   state.pending = null;
   state.stepNum = 0;

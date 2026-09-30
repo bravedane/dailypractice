@@ -526,23 +526,27 @@ const AREA_QUESTION_OVERRIDES = {
 function areaQuestionIntro(key) { return AREA_QUESTION_OVERRIDES[key] || `Let's talk about **${key}**`; }
 // Tiered by tenureTier() (new / early / mid / veteran) so the depth of the
 // question matches how many times someone's already done this reflection.
-// A first-timer gets a soft, exploratory prompt; someone on round 8+ gets
-// asked to name the pattern, not just describe the symptom — they've
-// already done the surface-level version of this question many times over.
+// A first-timer gets a soft, exploratory prompt; a veteran gets asked to
+// name the pattern, not just describe the symptom.
 //
-// Bug found 2026-09-29: this fires once per flagged area, so a veteran with
-// several flagged areas saw the identical opening line ("You've done this
-// before—") repeated verbatim area after area, which reads like a script
-// looping rather than a real conversation. It also collided almost
-// word-for-word with askTriedBefore's separate veteran-only question later
-// in the flow ("You've been through this before—"). Fixed by rotating
-// through several openers (tracked per-session via state.veteranPromptCount)
-// and by giving askTriedBefore its own distinct wording below.
+// Correction, 2026-09-29 (Dane): the first pass at veteran phrasing led
+// every variant with "you've done this before" / "same question, different
+// round" / "you know the drill" — explicitly announcing the tiering logic
+// instead of just asking a better question. That's backwards: a real coach
+// who's worked with someone for 8 rounds doesn't narrate the fact that
+// they've talked before, they just ask something sharper, because the
+// sharpness is what shows familiarity. Naming the repetition out loud reads
+// as an AI proving to itself that personalization fired, not something
+// that serves the person answering. Rewritten below to drop all
+// meta-commentary about tenure/rounds and just be the more direct
+// question. Rotation is kept (still fires once per flagged area) so
+// multiple areas in one session don't get verbatim-identical phrasing, but
+// none of the variants reference the user's history anymore.
 const VETERAN_OPENERS = [
-  (key) => `You've done this before — what's actually different about ${key} this time, or is it the same pattern you've seen before? Name the pattern if you can.`,
-  (key) => `Same ${key} question, different round — what's changed, if anything?`,
-  (key) => `You know the drill by now on ${key} — what's really going on this time?`,
-  (key) => `Let's skip the surface answer on ${key} — what's the actual pattern underneath it?`
+  (key) => `What's actually different about ${key} this time — or is it the same pattern again?`,
+  (key) => `What's changed with ${key} since it last looked like this?`,
+  (key) => `What's really going on with ${key} — not the surface reason, the actual one?`,
+  (key) => `What's the pattern underneath ${key}, if you had to name it?`
 ];
 function areaFollowUpPrompt(key, rating, ratingLabel) {
   const tier = tenureTier();

@@ -1256,18 +1256,43 @@ function getCurrentRoundStart(refDate) {
   }
   return candidates.find(c => c > refDate) || candidates[candidates.length - 1];
 }
-// Builds the pickable week options for the round containing refDate: Weeks
-// 1-12 plus Week 0, each labeled with its real date range, filtered to only
-// weeks that haven't fully ended yet (this is a forward commitment).
-function buildRoundWeekOptions(refDate) {
-  const roundStart = getCurrentRoundStart(refDate);
-  const weekNumbers = [...Array.from({length: 12}, (_, i) => i + 1), 0];
-  return weekNumbers.map(n => {
-    const offsetWeeks = n === 0 ? 12 : n - 1;
-    const start = new Date(roundStart); start.setDate(start.getDate() + offsetWeeks * 7);
-    const end = new Date(start); end.setDate(end.getDate() + 6);
-    return { n, start, end };
-  }).filter(w => w.end >= refDate).map(w => {
+// Builds the pickable week options for ALAF's 4-consecutive-week
+// commitment. Bug found 2026-09-29: this used to stop at the current
+// round's Week 0 boundary, so anyone picking near the tail of a round
+// (e.g. sitting in Week 0 itself, with no weeks left in-round) saw only
+// one option — not enough to start a 4-week span at all. Fixed by walking
+// forward round-by-round (current round, then the next one, etc.) until
+// there are enough remaining weeks-not-yet-ended to make every offered
+// start date a viable 4-week run. A round boundary crossing is still
+// labeled with its real week number (Week 1 of the next round), never
+// hidden — the date range in the label is what matters, not which round
+// it nominally belongs to.
+function buildRoundWeekOptions(refDate, weeksNeeded = 4) {
+  const results = [];
+  let roundStart = getCurrentRoundStart(refDate);
+  const seenRoundStarts = new Set();
+  // Walk forward enough rounds to guarantee weeksNeeded-1 weeks exist after
+  // any offered start, even if that start is the very last remaining week
+  // of the last round we collect from.
+  while (seenRoundStarts.size < 6) {
+    const key = formatISODate(roundStart);
+    if (seenRoundStarts.has(key)) break;
+    seenRoundStarts.add(key);
+    const weekNumbers = [...Array.from({length: 12}, (_, i) => i + 1), 0];
+    weekNumbers.forEach(n => {
+      const offsetWeeks = n === 0 ? 12 : n - 1;
+      const start = new Date(roundStart); start.setDate(start.getDate() + offsetWeeks * 7);
+      const end = new Date(start); end.setDate(end.getDate() + 6);
+      results.push({ n, start, end });
+    });
+    const nextStart = new Date(roundStart); nextStart.setDate(nextStart.getDate() + 91); // 13 weeks later
+    roundStart = getCurrentRoundStart(nextStart);
+    // Stop once we've collected enough future weeks past today that every
+    // not-yet-ended week has a full 4-week run available after it.
+    const notEnded = results.filter(w => w.end >= refDate);
+    if (notEnded.length >= weeksNeeded + 12) break; // generous buffer, cheap to compute
+  }
+  return results.filter(w => w.end >= refDate).map(w => {
     const label = `Week ${w.n} (${w.start.toLocaleDateString('en-US',{month:'short',day:'numeric'})}\u2013${w.end.toLocaleDateString('en-US',{month:'short',day:'numeric'})})`;
     return { label, value: formatISODate(w.start) };
   });

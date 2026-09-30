@@ -509,8 +509,21 @@ const AREA_QUESTION_OVERRIDES = {
   "Phone": "Let's talk about your **Phone Use**"
 };
 function areaQuestionIntro(key) { return AREA_QUESTION_OVERRIDES[key] || `Let's talk about **${key}**`; }
+// Tiered by tenureTier() (new / early / mid / veteran) so the depth of the
+// question matches how many times someone's already done this reflection.
+// A first-timer gets a soft, exploratory prompt; someone on round 8+ gets
+// asked to name the pattern, not just describe the symptom — they've
+// already done the surface-level version of this question many times over.
 function areaFollowUpPrompt(key, rating, ratingLabel) {
-  return `You said ${key} has been **${ratingLabel.toLowerCase()}**. Will you share a bit more about why that is? The more specific you are, the better this ends up serving you.`;
+  const tier = tenureTier();
+  const label = ratingLabel.toLowerCase();
+  if (tier === 'veteran') {
+    return `You've done this before — what's actually different about ${key} this time, or is it the same pattern you've seen before? Name the pattern if you can.`;
+  }
+  if (tier === 'new') {
+    return `You said ${key} has been **${label}**. No pressure to have it all figured out — just take a guess at why that might be.`;
+  }
+  return `You said ${key} has been **${label}**. Will you share a bit more about why that is? The more specific you are, the better this ends up serving you.`;
 }
 const DEFAULT_NN = [
   { text: "Sleep — 7+ hrs average per week, no phone in bed", status: "in" },
@@ -533,13 +546,98 @@ const state = {
   customRemovals: [],
   removalPicks: [],
   removalWhy: {},
+  dismissedFlags: {},
+  triedBefore: {},
   nonNegotiables: DEFAULT_NN.map(x => ({...x})),
   resetItems: ["No alcohol", "No processed food", "No refined sugar"],
+  resetDateStr: "",
+  resumePoint: null,
   pending: null,
   qCount: 0,
   stepNum: 0,
   history: []
 };
+
+// --- Save / resume (autosave) ------------------------------------------
+// localStorage only, no server round-trip. Persists the answer data plus a
+// coarse "resume point" (phase + index) so a closed tab or a refresh
+// doesn't wipe out everything typed so far. This is NOT pixel-perfect
+// resume of every micro-step — pending.onSubmit closures can't survive a
+// page reload, so short one-off questions (e.g. "want to track anything
+// else?") just get re-asked if the tab closes mid-way, which is cheap.
+// The two genuinely long stretches — rating all 13 areas, and building a
+// practice+timing pair per gap pick — get real idx-level checkpoints so
+// refreshing partway through those doesn't send someone back to question 1.
+const SAVE_KEY = 'mwodDailyPracticeDraft.v1';
+const PERSISTED_KEYS = ['customAreas','fRatings','fHowSo','isMember','roundCount','returningAfterGap','gapPicks','practices','timing','customRemovals','removalPicks','removalWhy','dismissedFlags','triedBefore','nonNegotiables','resetItems','resetDateStr','resumePoint'];
+function autosave() {
+  try {
+    const data = {};
+    PERSISTED_KEYS.forEach(k => { data[k] = state[k]; });
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch (e) { /* private browsing / quota — fail silent, autosave is best-effort */ }
+}
+function loadSavedDraft() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== 'object') return null;
+    return data;
+  } catch (e) { return null; }
+}
+function clearSavedDraft() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+}
+function setResumePoint(phase, idx) {
+  state.resumePoint = { phase, idx: idx == null ? null : idx };
+  autosave();
+}
+function resumeFlow() {
+  const rp = state.resumePoint;
+  if (!rp) { startFlow(); return; }
+  switch (rp.phase) {
+    case 'isMember': askIsMember(); return;
+    case 'roundCount': askRoundCount(); return;
+    case 'nonNegotiables': askNonNegotiables(); return;
+    case 'area': askArea(rp.idx || 0); return;
+    case 'addAnotherArea': askAddAnotherArea(); return;
+    case 'removalsIntro': askRemovalsIntro(); return;
+    case 'returningGap': askReturningGap(); return;
+    case 'gapPicks': askGapPicks(); return;
+    case 'practice': askPracticeForArea(rp.idx || 0); return;
+    case 'timing': askTimingForArea(rp.idx || 0); return;
+    case 'reset': askReset(); return;
+    case 'resetDate': askResetDate(); return;
+    default: startFlow(); return;
+  }
+}
+function startWithResumeCheck() {
+  const saved = loadSavedDraft();
+  // Only offer resume if they got at least past the first question — an
+  // empty/near-empty save isn't worth interrupting the intro message for.
+  if (saved && saved.isMember !== null && saved.isMember !== undefined) {
+    state.stepNum = 0;
+    updateProgressBar();
+    pushGeorge("Welcome back — want to pick up where you left off, or start fresh?", () => {
+      askQuestion("", {
+        type: 'chips',
+        options: [{label: 'Resume', value: 'resume'}, {label: 'Start Fresh', value: 'fresh'}],
+        onSubmit: (val) => {
+          if (val === 'resume') {
+            PERSISTED_KEYS.forEach(k => { if (k in saved) state[k] = saved[k]; });
+            resumeFlow();
+          } else {
+            clearSavedDraft();
+            restart();
+          }
+        }
+      });
+    });
+  } else {
+    startFlow();
+  }
+}
 
 // --- Back navigation -------------------------------------------------
 function snapshotState() {
@@ -705,6 +803,7 @@ function submitPending(value, displayLabel) {
   const p = state.pending;
   state.pending = null;
   clearInputArea();
+  autosave(); // every answer persisted immediately, not just at resume points
   p.onSubmit(value, label);
 }
 
@@ -879,6 +978,135 @@ function defaultPracticeDraftFor(key) {
     amount: "a few minutes, same time each day"
   };
 }
+
+// --- Doable / Uncomfortable variants (#7) -------------------------------
+// Two adjustment directions on the same draft, not a separate decision-tree
+// screen: "more doable" scales the practice down for someone who needs a
+// realistic entry point, "more uncomfortable" scales it up for someone who
+// wants real friction. Named after MWOD's own vocabulary on purpose —
+// "uncomfortable" isn't euphemized here, it's the brand's own word for what
+// this is supposed to feel like.
+const PRACTICE_VARIANTS = {
+  "Fitness":     { doable: { practice: "10 minutes of real movement — a short walk or a few bodyweight sets", amount: "10 minutes" }, uncomfortable: { practice: "A full workout, at real effort — something that's genuinely hard by the end", amount: "45-60 minutes" } },
+  "Food":        { doable: { practice: "One meal today with no added sugar", amount: "once a day" }, uncomfortable: { practice: "Every meal today fully clean — no processed food, no added sugar, all day", amount: "all day" } },
+  "Sleep":       { doable: { practice: "Phone charging outside the bedroom", amount: "every night" }, uncomfortable: { practice: "Phone away and lights out by a fixed time, no exceptions, no scrolling first", amount: "7+ hours, fixed bedtime" } },
+  "Hydration":   { doable: { practice: "One full glass of water before your first coffee", amount: "once a day" }, uncomfortable: { practice: "Water before coffee, tracked ounce by ounce through the day", amount: "90+ oz" } },
+  "Family":      { doable: { practice: "One short check-in — a text or a few minutes, phone away", amount: "5-10 minutes" }, uncomfortable: { practice: "One undistracted stretch of real presence — no phone, no multitasking", amount: "30+ minutes" } },
+  "Friends":     { doable: { practice: "One quick message to one friend", amount: "once a day" }, uncomfortable: { practice: "A real call, not a text — to someone you've been avoiding", amount: "once a day" } },
+  "Faith":       { doable: { practice: "A few minutes of quiet reflection or reading", amount: "5 minutes" }, uncomfortable: { practice: "A real practice — reading, prayer, and honest reflection, not rushed", amount: "20-30 minutes" } },
+  "Work":        { doable: { practice: "One 25-minute focused block on your top priority", amount: "25 minutes" }, uncomfortable: { practice: "Two focused blocks on the thing you're avoiding, distractions fully off", amount: "90 minutes" } },
+  "Frenemies":   { doable: { practice: "Notice the pattern once, and name it to yourself", amount: "as it comes up" }, uncomfortable: { practice: "Name the pattern out loud to someone you trust, not just to yourself", amount: "as it comes up" } },
+  "Money":       { doable: { practice: "Look at one number — your account balance", amount: "2 minutes" }, uncomfortable: { practice: "Full numbers: check every account, write it all down, no skipping the ugly parts", amount: "15-20 minutes" } },
+  "Projects":    { doable: { practice: "One small, visible step forward", amount: "10-15 minutes" }, uncomfortable: { practice: "Real forward progress — something that took actual effort, not busywork", amount: "45-60 minutes" } },
+  "Relationships": { doable: { practice: "A few minutes of real attention, phone away", amount: "10 minutes" }, uncomfortable: { practice: "Real, undistracted connection — no phone, no screen, the whole time", amount: "30-45 minutes" } },
+  "Phone":       { doable: { practice: "A short phone-free window", amount: "30 minutes" }, uncomfortable: { practice: "A long phone-free window, phone in another room entirely", amount: "2+ hours" } }
+};
+function defaultVariantFor(key) {
+  return PRACTICE_VARIANTS[key] || {
+    doable: { practice: `A smaller version of the daily action for ${key}`, amount: "a few minutes" },
+    uncomfortable: { practice: `A bigger, harder version of the daily action for ${key}`, amount: "more time, or more intensity" }
+  };
+}
+function applyPracticeVariant(key, direction) {
+  const variant = defaultVariantFor(key)[direction];
+  if (!variant) return;
+  const p = state.practices[key] || defaultPracticeDraftFor(key);
+  state.practices[key] = { ...p, practice: variant.practice, amount: variant.amount };
+  renderPracticeCard(key);
+}
+
+// --- Fail-safes (#8) ---------------------------------------------------
+// Soft, dismissible nudges only — never a hard block. MWOD's whole model
+// is honest self-assessment, not gatekeeping, so nothing here should trap
+// someone who wants to just get through it. Reuses the same tenure tiers
+// tenureNudge() already established for gap-pick sizing, so "too lofty"
+// means the same thing in both places instead of two competing scales.
+function tenureTier() {
+  if (state.returningAfterGap === true) return 'new';
+  const n = parseInt(state.roundCount, 10);
+  if (isNaN(n)) return 'mid';
+  if (n <= 1) return 'new';
+  if (n <= 3) return 'early';
+  return 'veteran';
+}
+function parseApproxMinutes(text) {
+  const t = (text || '').toLowerCase();
+  let m = t.match(/(\d+)\s*(?:-|to)\s*(\d+)\s*h(?:ou)?r/);
+  if (m) return ((+m[1] + +m[2]) / 2) * 60;
+  m = t.match(/(\d+(?:\.\d+)?)\s*\+?\s*h(?:ou)?r/);
+  if (m) return (+m[1]) * 60;
+  m = t.match(/(\d+)\s*(?:-|to)\s*(\d+)\s*min/);
+  if (m) return (+m[1] + +m[2]) / 2;
+  m = t.match(/(\d+)\s*\+?\s*min/);
+  if (m) return +m[1];
+  return null;
+}
+function isTooLofty(amountText) {
+  const mins = parseApproxMinutes(amountText);
+  if (mins == null) return false;
+  const tier = tenureTier();
+  if (tier === 'new' && mins >= 60) return true;
+  if (tier === 'early' && mins >= 120) return true;
+  return false;
+}
+function isVaguePractice(text) {
+  const words = (text || '').trim().split(/\s+/).filter(Boolean);
+  return words.length > 0 && words.length < 3;
+}
+function isVagueAmount(text) {
+  return (text || '').trim().length > 0 && !/\d/.test(text);
+}
+function isVagueAnchorText(text) {
+  const words = (text || '').trim().split(/\s+/).filter(Boolean);
+  return words.length > 0 && words.length < 2;
+}
+function isVagueShortAnswer(text) {
+  const words = (text || '').trim().split(/\s+/).filter(Boolean);
+  return words.length > 0 && words.length < 3;
+}
+function practiceCardFlags(key) {
+  const p = state.practices[key];
+  if (!p) return [];
+  const flags = [];
+  if (isVaguePractice(p.practice)) flags.push("That's pretty open-ended — want to name the specific action?");
+  if (p.amount.trim() && isVagueAmount(p.amount)) flags.push("No number or time attached to that yet — worth pinning down how long or how much.");
+  else if (isTooLofty(p.amount)) flags.push("That's a big jump this early in — sure you want to start there, or scale it back for now?");
+  return flags;
+}
+function timingCardFlags(key) {
+  const t = state.timing[key];
+  if (!t) return [];
+  const flags = [];
+  if (t.anchor && isVagueAnchorText(t.anchor)) flags.push("That anchor's pretty thin — tie it to something more specific and fixed in your day.");
+  if (t.backupAnchor && isVagueAnchorText(t.backupAnchor)) flags.push("Same for the backup — give it something concrete to hook onto.");
+  return flags;
+}
+// dismissedFlags stores the exact flag signature the user dismissed, keyed
+// per card. If the underlying answer changes, the signature no longer
+// matches and the nudge reappears automatically — dismissing doesn't mask
+// a totally different vague answer typed in later.
+function dismissFlags(dismissKey, kind, key) {
+  const flags = kind === 'practice' ? practiceCardFlags(key) : timingCardFlags(key);
+  state.dismissedFlags[dismissKey] = flags.join('|');
+  if (kind === 'practice') renderPracticeFlags(key); else renderTimingFlags(key);
+}
+function renderPracticeFlags(key) {
+  const container = document.getElementById('practiceFlags');
+  if (!container) return;
+  const flags = practiceCardFlags(key);
+  const dismissKey = 'practice:' + key;
+  if (!flags.length || state.dismissedFlags[dismissKey] === flags.join('|')) { container.innerHTML = ''; return; }
+  container.innerHTML = `<div class="directive" style="margin-top:10px;">${flags.map(f => `<div style="margin-bottom:4px;">⚠ ${escapeHtml(f)}</div>`).join('')}<button class="back-link" style="margin:6px 0 0;" onclick="dismissFlags('${dismissKey}','practice','${key}')">Got it — keeping it as is</button></div>`;
+}
+function renderTimingFlags(key) {
+  const container = document.getElementById('timingFlags');
+  if (!container) return;
+  const flags = timingCardFlags(key);
+  const dismissKey = 'timing:' + key;
+  if (!flags.length || state.dismissedFlags[dismissKey] === flags.join('|')) { container.innerHTML = ''; return; }
+  container.innerHTML = `<div class="directive" style="margin-top:10px;">${flags.map(f => `<div style="margin-bottom:4px;">⚠ ${escapeHtml(f)}</div>`).join('')}<button class="back-link" style="margin:6px 0 0;" onclick="dismissFlags('${dismissKey}','timing','${key}')">Got it — keeping it as is</button></div>`;
+}
+
 function renderPracticeCard(key) {
   if (!state.practices[key]) {
     state.practices[key] = defaultPracticeDraftFor(key);
@@ -896,9 +1124,15 @@ function renderPracticeCard(key) {
       <input type="text" placeholder="e.g. I logged it / it happened outside" value="${escapeHtml(p.doneDefinition)}" oninput="state.practices['${key}'].doneDefinition=this.value; renderPracticeCardBtn();">
       <label class="field-label">For how long, or how much?</label>
       <input type="text" placeholder="e.g. 20 minutes, or 1hr, 10am-5pm" value="${escapeHtml(p.amount)}" oninput="state.practices['${key}'].amount=this.value; renderPracticeCardBtn();">
+      <div style="display:flex; gap:8px; margin-top:2px;">
+        <button type="button" style="flex:1; background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:8px 6px; font-size:12px; cursor:pointer;" onclick="applyPracticeVariant('${key}','doable')">Make it more doable</button>
+        <button type="button" style="flex:1; background:transparent; border:1px solid var(--gold); color:var(--gold); border-radius:8px; padding:8px 6px; font-size:12px; cursor:pointer;" onclick="applyPracticeVariant('${key}','uncomfortable')">Make it more uncomfortable</button>
+      </div>
+      <div id="practiceFlags"></div>
     </div>
     <div class="continue-row"><button class="send" id="practiceBtn" ${ready?'':'disabled'} onclick="submitPending(true,'Practice set for ${key} ✓')">Continue</button></div>
   `;
+  renderPracticeFlags(key);
 }
 function renderPracticeCardBtn() {
   const p = state.pending;
@@ -906,6 +1140,7 @@ function renderPracticeCardBtn() {
   const pr = state.practices[p.key];
   const btn = document.getElementById('practiceBtn');
   if (btn) btn.disabled = !(pr.practice.trim() && pr.doneDefinition.trim() && pr.amount.trim());
+  renderPracticeFlags(p.key);
 }
 
 // --- Timing card (combines time/anchor/backup-time/backup-anchor into one screen) ---
@@ -930,9 +1165,11 @@ function renderTimingCard(key) {
       <input type="time" value="${t.backupTime}" oninput="state.timing['${key}'].backupTime=this.value; renderTimingCardBtn();">
       <label class="field-label">Backup tied to what?</label>
       <input type="text" placeholder="e.g. right before I go to bed" value="${escapeHtml(t.backupAnchor)}" oninput="state.timing['${key}'].backupAnchor=this.value; renderTimingCardBtn();">
+      <div id="timingFlags"></div>
     </div>
     <div class="continue-row"><button class="send" id="timingBtn" ${ready?'':'disabled'} onclick="submitPending(true,'Timing set for ${key} ✓')">Continue</button></div>
   `;
+  renderTimingFlags(key);
 }
 function renderTimingCardBtn() {
   const p = state.pending;
@@ -940,6 +1177,7 @@ function renderTimingCardBtn() {
   const t = state.timing[p.key];
   const btn = document.getElementById('timingBtn');
   if (btn) btn.disabled = !(t.time && t.anchor.trim() && t.backupTime && t.backupAnchor.trim());
+  renderTimingFlags(p.key);
 }
 
 // --- Reset card ---
@@ -1026,6 +1264,7 @@ function startFlow() {
 }
 
 function askIsMember() {
+  setResumePoint('isMember');
   askQuestion("Quick one first — are you an MWOD member?", {
     type: 'chips',
     options: [{label: "Yes, I'm a member", value: true}, {label: "No / not sure", value: false}],
@@ -1044,6 +1283,7 @@ function explainMwodThenContinue() {
 }
 
 function askRoundCount() {
+  setResumePoint('roundCount');
   askQuestion("How many rounds have you completed? Totally fine to skip if you're not sure.", {
     type: 'text-optional', placeholder: 'e.g. 6',
     onSubmit: (val) => { state.roundCount = val === '(skipped)' ? '' : val; askNonNegotiables(); }
@@ -1057,6 +1297,7 @@ function labelForRating(key, rating) {
 function askArea(idx) {
   const keys = allAreaKeys();
   if (idx >= keys.length) { askAddAnotherArea(); return; }
+  setResumePoint('area', idx);
   const key = keys[idx];
   const [lo, mid, hi] = ratingLabelsFor(key);
   const clarifier = areaClarifier(key);
@@ -1090,6 +1331,7 @@ function askAreaWhy(idx, key) {
   });
 }
 function askAddAnotherArea() {
+  setResumePoint('addAnotherArea');
   askQuestion("Want to track anything else, outside that list?", {
     type: 'chips',
     options: [{label: '+ Add another', value: 'add'}, {label: "I'm done", value: 'done'}],
@@ -1106,6 +1348,7 @@ function askAddAnotherArea() {
 // a boundary to declare. Kept optional and low-pressure. ---
 const REMOVAL_SUGGESTIONS = ["Alcohol", "Drugs / Substances", "Gambling", "A Toxic Relationship", "Screen / Media Bingeing"];
 function askRemovalsIntro() {
+  setResumePoint('removalsIntro');
   askQuestion("Is there anything you're actively trying to cut out or reduce right now? Alcohol, gambling, a toxic relationship — whatever it is.", {
     type: 'chips',
     options: [{label: 'Yes', value: true}, {label: 'No, not right now', value: false}],
@@ -1146,9 +1389,22 @@ function askRemovalWhy(idx) {
   askQuestion(`What's going on with **${item}**? The more specific you are, the better this ends up serving you.`, {
     type: 'text-optional', placeholder: 'One sentence is plenty',
     onSubmit: (val) => {
-      state.removalWhy[item] = (val && val !== '(skipped)') ? val : '';
-      askRemovalWhy(idx + 1);
+      const hadContent = val && val !== '(skipped)';
+      state.removalWhy[item] = hadContent ? val : '';
+      // Fail-safe (#8): a removal with no real plan behind it — just a
+      // one-word answer like "stress" — is the same "too vague" problem as
+      // a vague practice, in a different shape. Soft nudge only, never a
+      // block: offer to add more, or move on as-is.
+      if (hadContent && isVagueShortAnswer(val)) { askRemovalWhyConfirm(idx, item); }
+      else { askRemovalWhy(idx + 1); }
     }
+  });
+}
+function askRemovalWhyConfirm(idx, item) {
+  askQuestion(`That's pretty brief for something you're actively trying to cut out — want to add a bit more, or keep it as is?`, {
+    type: 'chips',
+    options: [{label: 'Add more detail', value: 'more'}, {label: 'Keep it as is', value: 'keep'}],
+    onSubmit: (val) => { if (val === 'more') askRemovalWhy(idx); else askRemovalWhy(idx + 1); }
   });
 }
 
@@ -1168,6 +1424,7 @@ function askCustomAreaName() {
   });
 }
 function askReturningGap() {
+  setResumePoint('returningGap');
   askQuestion("Coming back after taking some time off?", {
     type: 'chips',
     options: [{label: 'Yes', value: true}, {label: 'No', value: false}],
@@ -1185,6 +1442,7 @@ function tenureNudge() {
   return null;
 }
 function askGapPicks() {
+  setResumePoint('gapPicks');
   const nudge = tenureNudge();
   const proceed = () => {
     const keys = allAreaKeys();
@@ -1200,6 +1458,7 @@ function askGapPicks() {
   else { proceed(); }
 }
 function askNonNegotiables() {
+  setResumePoint('nonNegotiables');
   askQuestion("At MWOD, we recommend the following 5 Baseline Habits be part of everyone's practice. Once you've got these committed, we'll help you consider other opportunities to add to your practice in this season of your life.", {
     type: 'nn-card',
     onSubmit: () => { askArea(0); }
@@ -1212,10 +1471,28 @@ function askNonNegotiables() {
 // not after. See askAreaWhy above.
 function askPracticeForArea(idx) {
   if (idx >= state.gapPicks.length) { askTimingForArea(0); return; }
+  setResumePoint('practice', idx);
   const key = state.gapPicks[idx];
+  // Veteran-only bonus question: the one thing a repeat member can answer
+  // that a first-timer can't. Asked once per area, right before building
+  // the new practice, so the answer can inform what actually gets built
+  // instead of just being collected for its own sake.
+  if (tenureTier() === 'veteran' && !state.triedBefore[key]) {
+    askTriedBefore(idx, key);
+    return;
+  }
   askQuestion(`Let's build the daily habit for **${key}**. Each one needs a little friction in it — not something you're already coasting on.`, {
     type: 'practice-card', key,
     onSubmit: () => { askPracticeForArea(idx + 1); }
+  });
+}
+function askTriedBefore(idx, key) {
+  askQuestion(`You've been through this before — what have you already tried for **${key}** that didn't stick?`, {
+    type: 'text-optional', placeholder: 'One sentence is plenty, or skip if nothing comes to mind',
+    onSubmit: (val) => {
+      state.triedBefore[key] = (val && val !== '(skipped)') ? val : '(nothing noted)';
+      askPracticeForArea(idx);
+    }
   });
 }
 function askTimingForArea(idx) {
@@ -1223,6 +1500,7 @@ function askTimingForArea(idx) {
     if (state.isMember) askReset(); else showResult();
     return;
   }
+  setResumePoint('timing', idx);
   const key = state.gapPicks[idx];
   askQuestion(`Now the timing for **${key}** — when it happens, and your backup plan if the day gets knocked off track.`, {
     type: 'timing-card', key,
@@ -1230,12 +1508,14 @@ function askTimingForArea(idx) {
   });
 }
 function askReset() {
+  setResumePoint('reset');
   askQuestion("Last question (this one's for just for MWOD members): For your Act Like A FUTURE (ALAF) Weeks, your job is to commit to 4 consecutive weeks when you'll be on the hook to act like a future. Choose what that means for you below. The dates are coming next.", {
     type: 'reset-card',
     onSubmit: () => { askResetDate(); }
   });
 }
 function askResetDate() {
+  setResumePoint('resetDate');
   const options = buildRoundWeekOptions(new Date());
   askQuestion("Which week of your round do those 4 weeks start on?", {
     type: 'week-picker',
@@ -1438,6 +1718,7 @@ async function submitSubscribe() {
 }
 
 function restart() {
+  clearSavedDraft();
   state.transcript = [];
   state.customAreas = [];
   state.fRatings = {};
@@ -1454,6 +1735,9 @@ function restart() {
   state.customRemovals = [];
   state.removalPicks = [];
   state.removalWhy = {};
+  state.dismissedFlags = {};
+  state.triedBefore = {};
+  state.resumePoint = null;
   state.pending = null;
   state.stepNum = 0;
   state.history = [];
@@ -1462,7 +1746,14 @@ function restart() {
   startFlow();
 }
 
-startFlow();
+// showResult is the finish line — once someone has their declaration, the
+// draft is done serving its purpose. Clearing it here (rather than only on
+// explicit restart) means closing the tab after finishing doesn't leave a
+// stale "welcome back" prompt waiting on their next visit.
+const _showResult = showResult;
+showResult = function() { clearSavedDraft(); _showResult(); };
+
+startWithResumeCheck();
 </script>
 </body>
 </html>

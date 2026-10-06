@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MWOD — What Do You Want?</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root {
+    --gold: #ffd627;
+    --black: #0c0c0c;
+    --white: #fafafa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    background: var(--black);
+    overflow: hidden;
+  }
+  .slide {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 5vw 6vw;
+  }
+
+  /* brand accent shape, bleeding off the right edge */
+  .accent {
+    position: absolute;
+    top: -8vw;
+    right: -10vw;
+    width: 46vw;
+    height: 46vw;
+    background: var(--gold);
+    transform: rotate(18deg);
+    opacity: 0.9;
+    z-index: 0;
+  }
+  .accent::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--black);
+    transform: scale(0.86);
+  }
+
+  .eyebrow {
+    position: relative;
+    z-index: 2;
+    font-family: "Aeonik", sans-serif;
+    font-weight: 700;
+    font-size: clamp(16px, 1.6vw, 28px);
+    letter-spacing: 0.35em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 1.2vw;
+  }
+
+  .headline {
+    position: relative;
+    z-index: 2;
+    font-family: "Aeonik", sans-serif;
+    font-weight: 700;
+    font-size: clamp(32px, 5.2vw, 110px);
+    line-height: 0.92;
+    letter-spacing: -0.01em;
+    color: var(--white);
+    text-transform: uppercase;
+  }
+
+  .want {
+    position: relative;
+    z-index: 2;
+    font-family: "Schabo Condensed", sans-serif;
+    font-weight: 400;
+    font-size: clamp(140px, 30vw, 620px);
+    line-height: 0.74;
+    letter-spacing: -0.015em;
+    color: var(--black);
+    -webkit-text-stroke: 3px var(--gold);
+    text-transform: uppercase;
+    margin-top: -1vw;
+    margin-left: -0.5vw;
+    transform: rotate(-2.5deg);
+    transform-origin: left center;
+    white-space: nowrap;
+  }
+
+  .want .fill {
+    color: var(--gold);
+    -webkit-text-stroke: 0;
+  }
+
+  .mark {
+    position: absolute;
+    bottom: 4vw;
+    right: 5vw;
+    z-index: 2;
+    font-family: "Aeonik", sans-serif;
+    font-weight: 700;
+    font-size: clamp(12px, 1.1vw, 20px);
+    letter-spacing: 0.3em;
+    color: #666;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <div class="slide">
+    <div class="accent"></div>
+    <div class="eyebrow">Stop drifting.</div>
+    <div class="headline">What do you</div>
+    <div class="want"><span class="fill">WANT</span>?</div>
+    <div class="mark">Men &amp; Women of Discomfort</div>
+  </div>
+</body>
+</html>

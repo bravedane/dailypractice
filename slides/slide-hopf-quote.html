@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quote — G. Michael Hopf</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root {
+    --gold: #ffd627;
+    --black: #0c0c0c;
+    --white: #fafafa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    background: var(--white);
+    overflow: hidden;
+  }
+  .slide {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2vw 7vw;
+  }
+
+  .mark {
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .quote {
+    font-family: "Aeonik", sans-serif;
+    font-weight: 700;
+    font-size: clamp(34px, 4.6vw, 80px);
+    line-height: 1.22;
+    color: var(--black);
+    max-width: 86vw;
+  }
+
+  .quote p {
+    margin-bottom: 0.3em;
+  }
+
+  .quote p:last-of-type {
+    margin-bottom: 0;
+  }
+
+  .quote em {
+    font-style: normal;
+    font-weight: 700;
+    color: #171717;
+    background: var(--gold);
+    padding: 0 0.12em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  .attribution {
+    margin-top: 1.6em;
+    align-self: flex-end;
+    font-family: "Aeonik", sans-serif;
+    font-weight: 700;
+    font-size: clamp(18px, 1.5vw, 26px);
+    letter-spacing: 0.08em;
+    color: var(--black);
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <div class="slide">
+    <div class="quote">
+      <p><span class="mark">&ldquo;</span>Hard times create <em>strong</em> men.</p>
+      <p>Strong men create <em>good</em> times.</p>
+      <p>Good times create <em>weak</em> men.</p>
+      <p>And weak men create <em>hard</em> times.<span class="mark">&rdquo;</span></p>
+    </div>
+    <div class="attribution">&mdash; G. Michael Hopf</div>
+  </div>
+</body>
+</html>

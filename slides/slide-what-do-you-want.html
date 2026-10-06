@@ -24,28 +24,8 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    align-items: flex-start;
-    padding: 5vw 6vw;
-  }
-
-  /* brand accent shape, bleeding off the right edge */
-  .accent {
-    position: absolute;
-    top: -8vw;
-    right: -10vw;
-    width: 46vw;
-    height: 46vw;
-    background: var(--gold);
-    transform: rotate(18deg);
-    opacity: 0.9;
-    z-index: 0;
-  }
-  .accent::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: var(--black);
-    transform: scale(0.86);
+    align-items: center;
+    padding: 4vw;
   }
 
   .headline {
@@ -53,11 +33,12 @@
     z-index: 2;
     font-family: "Aeonik", sans-serif;
     font-weight: 700;
-    font-size: clamp(32px, 5.2vw, 110px);
-    line-height: 0.92;
-    letter-spacing: -0.01em;
+    font-size: clamp(28px, 3.6vw, 72px);
+    line-height: 1;
+    letter-spacing: 0.02em;
     color: var(--white);
     text-transform: uppercase;
+    text-align: center;
   }
 
   .want {
@@ -65,31 +46,21 @@
     z-index: 2;
     font-family: "Schabo Condensed", sans-serif;
     font-weight: 400;
-    font-size: clamp(140px, 30vw, 620px);
-    line-height: 0.74;
-    letter-spacing: -0.015em;
-    color: var(--black);
-    -webkit-text-stroke: 3px var(--gold);
-    text-transform: uppercase;
-    margin-top: -1vw;
-    margin-left: -0.5vw;
-    transform: rotate(-2.5deg);
-    transform-origin: left center;
-    white-space: nowrap;
-  }
-
-  .want .fill {
+    font-size: clamp(180px, 34vw, 720px);
+    line-height: 0.82;
+    letter-spacing: -0.01em;
     color: var(--gold);
-    -webkit-text-stroke: 0;
+    text-transform: uppercase;
+    text-align: center;
+    white-space: nowrap;
   }
 
 </style>
 </head>
 <body>
   <div class="slide">
-    <div class="accent"></div>
     <div class="headline">What do you</div>
-    <div class="want"><span class="fill">WANT</span>?</div>
+    <div class="want">WANT?</div>
   </div>
 </body>
 </html>

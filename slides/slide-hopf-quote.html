@@ -60,6 +60,16 @@
     -webkit-box-decoration-break: clone;
   }
 
+  .quote .cause {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--black);
+    text-decoration: underline;
+    text-decoration-color: var(--gold);
+    text-decoration-thickness: 0.09em;
+    text-underline-offset: 0.12em;
+  }
+
   .attribution {
     margin-top: 1.6em;
     align-self: flex-end;
@@ -75,10 +85,10 @@
 <body>
   <div class="slide">
     <div class="quote">
-      <p><span class="mark">&ldquo;</span><em>Hard</em> times create <em>strong</em> men.</p>
-      <p><em>Strong</em> men create <em>good</em> times.</p>
-      <p><em>Good</em> times create <em>weak</em> men.</p>
-      <p>And <em>weak</em> men create <em>hard</em> times.<span class="mark">&rdquo;</span></p>
+      <p><span class="mark">&ldquo;</span><span class="cause">Hard</span> times create <em>strong</em> men.</p>
+      <p><span class="cause">Strong</span> men create <em>good</em> times.</p>
+      <p><span class="cause">Good</span> times create <em>weak</em> men.</p>
+      <p>And <span class="cause">weak</span> men create <em>hard</em> times.<span class="mark">&rdquo;</span></p>
     </div>
     <div class="attribution">&mdash; G. Michael Hopf</div>
   </div>

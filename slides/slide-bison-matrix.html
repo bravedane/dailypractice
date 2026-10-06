@@ -210,20 +210,6 @@ html, body {
 .q-addiction.is-active .q-label { color: var(--addiction); }
 .q-addiction.is-active .q-desc  { color: var(--addiction-dim); }
 
-/* arrow */
-.arrow-wrap {
-  position: absolute;
-  left: 7%;
-  right: 7%;
-  top: 4%;
-  height: 26%;
-  opacity: 0;
-  transition: opacity 0.8s ease;
-  pointer-events: none;
-}
-.arrow-wrap.is-shown { opacity: 1; }
-.arrow-wrap svg { width: 100%; height: 100%; overflow: visible; }
-
 /* progress + hint */
 .chrome {
   position: fixed;
@@ -267,26 +253,12 @@ html, body {
 
         <div class="quadrant q-drift" data-group="drift">
           <div class="q-label">The Drift</div>
-          <div class="q-desc">Comfort I slid into without deciding.</div>
+          <div class="q-desc">Currents that take me places I don&rsquo;t want to go.</div>
         </div>
 
         <div class="quadrant q-addiction" data-group="addiction">
           <div class="q-label">Addiction</div>
           <div class="q-desc">Choosing cheap, short-term comfort until it chooses me.</div>
-        </div>
-
-        <div class="arrow-wrap" data-group="arrow">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-            <defs>
-              <marker id="arrowhead" viewBox="0 0 10 10" refX="8" refY="5"
-                      markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
-                <path d="M0,0 L10,5 L0,10 Z" fill="#ffd627"></path>
-              </marker>
-            </defs>
-            <path d="M 6 92 Q 50 -14 94 92"
-                  fill="none" stroke="#ffd627" stroke-width="2.4"
-                  stroke-linecap="round" marker-end="url(#arrowhead)"></path>
-          </svg>
         </div>
 
       </div>
@@ -295,13 +267,13 @@ html, body {
   </div>
 
   <div class="chrome">
-    <span id="progress">1 / 8</span>
+    <span id="progress">1 / 7</span>
     <span class="hint" id="hint">click or &rarr; to continue</span>
   </div>
 
 <script>
 (function () {
-  var STEPS = ['title', 'axis-x', 'axis-y', 'storms', 'drift', 'addiction', 'agency', 'arrow'];
+  var STEPS = ['title', 'axis-x', 'axis-y', 'storms', 'drift', 'addiction', 'agency'];
   var current = 0;
   var progressEl = document.getElementById('progress');
   var hintEl = document.getElementById('hint');
@@ -311,11 +283,6 @@ html, body {
       var els = document.querySelectorAll('[data-group="' + key + '"]');
       var shown = idx <= current;
       var active = idx === current;
-
-      // Final step: arrow reveal brings Storms + Agency back to full color
-      if (current === STEPS.length - 1 && (key === 'storms' || key === 'agency')) {
-        active = true;
-      }
 
       els.forEach(function (el) {
         el.classList.toggle('is-shown', shown);

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quote — Anthony de Mello</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  :root {
+    --gold: #ffd627;
+    --black: #0c0c0c;
+    --white: #fafafa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    background: var(--black);
+    overflow: hidden;
+  }
+  .slide {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 5vw 10vw;
+    text-align: center;
+  }
+
+  .mark {
+    font-family: "Schabo Condensed", sans-serif;
+    font-size: clamp(60px, 9vw, 160px);
+    line-height: 1;
+    color: var(--gold);
+    margin-bottom: 0.5vw;
+  }
+
+  .quote {
+    font-family: "Aeonik", sans-serif;
+    font-weight: 400;
+    font-size: clamp(22px, 2.75vw, 46px);
+    line-height: 1.32;
+    color: var(--white);
+    max-width: 62vw;
+  }
+
+  .quote em {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .attribution {
+    margin-top: 3vw;
+    font-family: "Aeonik", sans-serif;
+    font-weight: 700;
+    font-size: clamp(16px, 1.3vw, 24px);
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <div class="slide">
+    <div class="mark">&ldquo;</div>
+    <div class="quote">
+      Spirituality means <em>waking up</em>. Most people, even though they don&rsquo;t know it, are asleep. They&rsquo;re born asleep, they live asleep, they marry in their sleep, they breed children in their sleep, they die in their sleep without ever waking up. They never understand the loveliness and the beauty of this thing that we call human existence.
+    </div>
+    <div class="attribution">&mdash; Anthony de Mello</div>
+  </div>
+</body>
+</html>

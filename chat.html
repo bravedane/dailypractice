@@ -1350,6 +1350,92 @@ function labelForRating(key, rating) {
   const [lo, mid, hi] = ratingLabelsFor(key);
   return rating === 'strong' ? hi : rating === 'inconsistent' ? mid : lo;
 }
+
+// Plain-text version of the declaration, built straight from state — same
+// source data as the on-screen result and the PDF, so there is no way for
+// this to come out blank or out of sync with what the person actually
+// committed to. Used by the "Email This To Yourself" feature: we hand this
+// text to the user's own mail client as a pre-filled, pre-addressed draft
+// (via a mailto: link) rather than relying on a third-party email-sending
+// service we don't have credentials for — it's instant, has zero external
+// dependency, and guarantees the content matches exactly what's on screen.
+function buildResultPlainText() {
+  const lines = [];
+  lines.push('YOUR DAILY PRACTICE — Locked In');
+  lines.push('');
+
+  const nnIn = state.nonNegotiables.filter(nn => nn.status === 'in');
+  const nnOut = state.nonNegotiables.filter(nn => nn.status === 'out');
+  lines.push('BASELINE HABITS');
+  nnIn.forEach(nn => lines.push('- ' + nn.text));
+  if (nnOut.length) lines.push('Out: ' + nnOut.map(nn => nn.text).join(', '));
+  lines.push('');
+
+  const baselineKeys = allAreaKeys().filter(k => state.fRatings[k]);
+  if (baselineKeys.length) {
+    lines.push('CURRENT REALITY');
+    baselineKeys.forEach(k => lines.push(`- ${k}: ${labelForRating(k, state.fRatings[k])}`));
+    lines.push('');
+  }
+
+  if (state.gapPicks.length) {
+    lines.push('COURSE CORRECTION');
+    state.gapPicks.forEach(k => {
+      const rating = state.fRatings[k];
+      const note = state.fHowSo[k] ? ` — ${state.fHowSo[k]}` : '';
+      lines.push(`- ${k}: ${rating}${note}`);
+    });
+    lines.push('');
+
+    lines.push('PRACTICES');
+    state.gapPicks.forEach(k => {
+      const p = state.practices[k] || { practice: '', doneDefinition: '', amount: '' };
+      const t = state.timing[k] || {};
+      lines.push(`${k}:`);
+      lines.push(`  Practice: ${p.practice}`);
+      lines.push(`  Done when: ${p.doneDefinition} — ${p.amount}`);
+      lines.push(`  When: ${t.time || '—'} ${t.anchor || ''} (Backup: ${t.backupTime || '—'} ${t.backupAnchor || ''})`);
+    });
+    lines.push('');
+  }
+
+  if (state.removalPicks.length) {
+    lines.push('CUTTING OUT / REDUCING');
+    state.removalPicks.forEach(item => {
+      lines.push(`- ${item}${state.removalWhy[item] ? ' — ' + state.removalWhy[item] : ''}`);
+    });
+    lines.push('');
+  }
+
+  if (state.isMember) {
+    let resetRangeText = '—';
+    if (state.resetDateStr) {
+      const start = new Date(state.resetDateStr + 'T00:00:00');
+      const end = addDays(state.resetDateStr, 27);
+      resetRangeText = `${formatDate(start)} -> ${formatDate(end)}`;
+    }
+    lines.push('ACT LIKE A FUTURE — 4 WEEKS');
+    lines.push(resetRangeText);
+    const resetItems = state.resetItems.filter(r => r.trim());
+    if (resetItems.length) lines.push(resetItems.join(' · '));
+    lines.push('');
+  }
+
+  lines.push('— Your Daily Practice, MWOD');
+  return lines.join('\n');
+}
+
+function emailMeResult() {
+  const input = document.getElementById('emailResultInput');
+  const status = document.getElementById('emailResultStatus');
+  const email = input.value.trim();
+  if (!email || !email.includes('@')) { status.textContent = 'Enter a valid email.'; return; }
+  const subject = 'Your Daily Practice — Your Declaration';
+  const body = buildResultPlainText();
+  const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+  status.textContent = "Opening your email app with it pre-filled — hit send to lock it in.";
+}
 function askArea(idx) {
   const keys = allAreaKeys();
   if (idx >= keys.length) { askAddAnotherArea(); return; }
@@ -1739,6 +1825,14 @@ function showResult() {
     document.getElementById('inputArea').innerHTML = `
       <div class="result-actions">
         <button class="pdf-btn" onclick="window.print()">⬇ Save as PDF</button>
+        <div class="subscribe-box">
+          <p>Want a copy of exactly what you just committed to? We'll email you this declaration right now.</p>
+          <div class="subscribe-row">
+            <input type="text" id="emailResultInput" placeholder="you@example.com">
+            <button class="send" onclick="emailMeResult()">Email Me This</button>
+          </div>
+          <div class="subscribe-status" id="emailResultStatus"></div>
+        </div>
         <div class="subscribe-box">
           <p>Want a weekly email you can count on to help you stick with this? We'll send one practical nudge a week to help you keep your practice.</p>
           <div class="subscribe-row">

@@ -1435,6 +1435,16 @@ function emailMeResult() {
   const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = mailto;
   status.textContent = "Opening your email app with it pre-filled — hit send to lock it in.";
+  // Best-effort lead capture: tag them in Kit as someone who completed the
+  // tool and asked for their result — a stronger signal than the separate
+  // weekly-nudge opt-in below. Fire-and-forget; never blocks or overrides
+  // the mailto: flow above, and failures here are silent to the user since
+  // their actual email draft already opened regardless.
+  fetch('/api/email-result', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  }).catch(() => {});
 }
 function askArea(idx) {
   const keys = allAreaKeys();
